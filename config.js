@@ -2,12 +2,16 @@
 window.QUIZ_CONFIG = {
   title: "استبيان قياس فهم أنظمة قطاع الطاقة",
   intro:
-    "اختبر فهمك لأنظمة قطاع الطاقة. تُختار الأسئلة عشوائياً من بنك الأسئلة وتتوزع على الأنظمة " +
-    "ومستويات الصعوبة الثلاثة، فتختلف الأسئلة في كل محاولة. وبعد الإنهاء تظهر لك نتيجتك مع " +
-    "الإجابة الصحيحة لكل سؤال وسندها النظامي وشرح مبسط لها.",
+    "يهدف هذا الاستبيان إلى قياس فهم أنظمة قطاع الطاقة. تُختار الأسئلة عشوائياً في كل محاولة، " +
+    "وبعد الإنهاء تظهر نتيجتك مع الإجابة الصحيحة لكل سؤال وسندها النظامي وشرح مبسط لها.",
+
+  // Logo shown in the header. Upload the image to this path (PNG or SVG; change the
+  // extension here if needed). While the file is missing the header shows the title only.
+  organization: "وزارة الطاقة",
+  logo: "assets/logo.png",
 
   // Questions drawn from each level in one attempt (1 = الأول (تأسيسي), 2 = المتوسط, 3 = المتقدم).
-  // 10 + 9 + 6 = 25 questions. Each level's share is spread evenly across the regulations.
+  // 10 + 9 + 6 = 25 questions. Levels are used for the draw only and are not shown to participants.
   questionsPerLevel: { 1: 10, 2: 9, 3: 6 },
 
   // Participants must pick one of these before starting.
@@ -18,6 +22,9 @@ window.QUIZ_CONFIG = {
     "الأمانة العامة للنظر في المخالفات",
     "إدارة التمثيل",
     "إدارة التحقيق",
+    "إدارة العقود",
+    "إدارة الاتفاقيات",
+    "إدارة الدعم والمساندة",
   ],
 
   // Shuffle the options of multiple-choice questions for every participant.

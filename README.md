@@ -5,8 +5,8 @@ An Arabic, mobile-friendly quiz website built from the question bank in
 regulations and 3 levels.
 
 Participants pick their department, answer 25 questions one at a time, and,
-once they finish, see their score (overall, per level and per regulation)
-with each question's correct answer, its legal reference (السند النظامي) and
+once they finish, see their score (overall and per regulation) with each
+question's correct answer, its legal reference (السند النظامي) and
 the simple explanation (شرح مبسط). The review-notes column
 (ملاحظات للمراجعة) is internal and is never shown on the site.
 
@@ -23,7 +23,8 @@ Every attempt draws a fresh set from the bank:
 - Each level's share is spread across the six regulations, so every
   attempt covers all of them (4–5 questions each).
 - Questions run from foundational to advanced; their order within a level
-  and the order of the options are shuffled.
+  and the order of the options are shuffled. Levels are used only for the
+  draw and are never shown to participants.
 - The browser remembers which questions it has already shown and prefers
   ones it has not, so a second attempt on the same device gets a completely
   new set. From the third attempt some foundational questions come back,
@@ -45,6 +46,14 @@ for free on GitHub Pages at a link like
 Share that link with participants. To use your own domain instead
 (for example `quiz.example.com`), enter it under **Custom domain** on the
 same page and follow GitHub's DNS instructions.
+
+## Add the logo
+
+Upload the ministry logo as `assets/logo.png` (on GitHub: open the `assets`
+folder, *Add file → Upload files*, and name the file `logo.png`). It appears
+in the header and as the browser-tab icon. For an SVG or JPG, upload it and
+change `logo` in `config.js` to match. Until the file exists the header shows
+the title only.
 
 ## Update the questions
 
@@ -82,8 +91,8 @@ kept in their own browser. To see everyone's results:
 
 The start page then also asks for the participant's name, and each finished
 quiz adds a row to the sheet: date, department, name, score, percentage,
-time taken, score per level and per regulation, and the questions answered
-wrongly. Filter or pivot on the department column to compare departments.
+time taken, score per level and per regulation (levels appear only here, not
+to participants), and the questions answered wrongly. Filter or pivot on the department column to compare departments.
 
 ## Good to know
 
@@ -99,7 +108,7 @@ wrongly. Filter or pivot on the department column to compare departments.
 |---|---|
 | `index.html`, `assets/style.css`, `assets/app.js` | The website |
 | `assets/questions.js` | Questions generated from the spreadsheet (do not edit by hand) |
-| `config.js` | Questions per level, departments, title, intro text and optional results URL |
+| `config.js` | Logo path, questions per level, departments, title, intro text and optional results URL |
 | `data/questions.xlsx` | The question bank (source of truth) |
 | `scripts/build_questions.py` | Spreadsheet → `assets/questions.js` converter |
 | `.github/workflows/update-questions.yml` | Re-runs the converter when the spreadsheet changes |

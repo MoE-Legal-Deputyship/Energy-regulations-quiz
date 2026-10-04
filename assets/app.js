@@ -6,6 +6,8 @@
     {
       title: "استبيان قياس فهم أنظمة قطاع الطاقة",
       intro: "",
+      organization: "",
+      logo: "",
       questionsPerLevel: { 1: 10, 2: 9, 3: 6 },
       departments: [],
       shuffleOptions: true,
@@ -17,21 +19,12 @@
   const SHOWN_KEY = "energy-regulations-quiz:shown";
   const app = document.getElementById("app");
 
-  const LETTERS = ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح"];
-  const TYPE_LABEL = { mcq: "اختيار من متعدد", exclude: "استبعاد الخيار الخاطئ", tf: "صح أو خطأ" };
   const TYPE_HINT = {
-    mcq: "اختر الإجابة الصحيحة",
-    exclude: "انتبه: اختر الخيار غير الصحيح",
-    tf: "حدّد هل العبارة صحيحة أم خاطئة",
+    mcq: "اختر الإجابة الصحيحة.",
+    exclude: "اختر الخيار غير الصحيح.",
+    tf: "حدّد هل العبارة صحيحة أم خاطئة.",
   };
-  const FORMS = {
-    question: ["سؤال واحد", "سؤالان", "أسئلة", "سؤالاً", "سؤال"],
-    system: ["نظام واحد", "نظامان", "أنظمة", "نظاماً", "نظام"],
-    level: ["مستوى واحد", "مستويان", "مستويات", "مستوى", "مستوى"],
-  };
-  const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
-  const ICON_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
-  const BOX_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+  const QUESTION_FORMS = ["سؤال واحد", "سؤالان", "أسئلة", "سؤالاً", "سؤال"];
 
   if (!DATA || !Array.isArray(DATA.systems)) {
     app.innerHTML = '<p class="card">تعذّر تحميل الأسئلة.</p>';
@@ -58,17 +51,11 @@
   }
 
   // Arabic counted-noun agreement: 1, 2, 3–10, 11–99, and 100/101/102...
-  function noun(n, forms) {
-    const m = n % 100;
-    if (n === 2) return forms[1];
-    if (m >= 3 && m <= 10) return forms[2];
-    if (m >= 11) return forms[3];
-    return forms[4];
-  }
   function count(n, forms) {
     if (n === 1) return forms[0];
     if (n === 2) return forms[1];
-    return n + " " + noun(n, forms);
+    const m = n % 100;
+    return n + " " + (m >= 3 && m <= 10 ? forms[2] : m >= 11 ? forms[3] : forms[4]);
   }
 
   function shuffle(arr) {
@@ -165,58 +152,48 @@
       const done = state.answers.filter((a) => a != null).length;
       notice = `
         <section class="card notice">
-          <p>لديك اختبار لم يكتمل: أجبت عن ${done} من ${state.items.length}.</p>
-          <button type="button" class="btn btn-primary" data-act="resume">متابعة الاختبار</button>
+          <p>لديك استبيان لم يكتمل (أجبت عن ${done} من ${state.items.length}).</p>
+          <button type="button" class="btn btn-primary" data-act="resume">متابعة</button>
         </section>`;
     } else if (state && state.finishedAt) {
       notice = `
         <section class="card notice">
-          <p>أنهيت اختباراً سابقاً على هذا الجهاز.</p>
-          <button type="button" class="btn btn-ghost" data-act="show-results">عرض النتيجة السابقة</button>
+          <p>سبق أن أنهيت الاستبيان على هذا الجهاز.</p>
+          <button type="button" class="btn btn-secondary" data-act="show-results">عرض النتيجة السابقة</button>
         </section>`;
     }
 
-    const levelTags = LEVEL_IDS.filter((l) => levelQuota.get(l)).map((l) =>
-      `<span class="tag lvl-${l}">${esc(DATA.levels[l])}: ${levelQuota.get(l)}</span>`).join("");
-
     const departments = (CFG.departments || []).map((d) => `
-      <label class="choice radio">
+      <label class="choice">
         <input type="radio" name="department" value="${esc(d)}" ${form.department === d ? "checked" : ""}>
-        <span class="box">${BOX_CHECK}</span>
+        <span class="dot" aria-hidden="true"></span>
         <span class="label">${esc(d)}</span>
       </label>`).join("");
 
     const nameField = collect ? `
       <div class="field">
         <label for="name">الاسم</label>
-        <input id="name" name="name" autocomplete="name" maxlength="80" value="${esc(form.name)}" placeholder="اكتب اسمك">
+        <input id="name" name="name" autocomplete="name" maxlength="80" value="${esc(form.name)}">
       </div>` : "";
 
     show(`
-      <section class="card hero">
+      <section class="card intro">
         <h1 data-focus tabindex="-1">${esc(CFG.title)}</h1>
         <p>${esc(CFG.intro)}</p>
-        <div class="stats">
-          <div class="stat"><b>${quizLength}</b><span>${noun(quizLength, FORMS.question)} في كل محاولة</span></div>
-          <div class="stat"><b>${DATA.systems.length}</b><span>${noun(DATA.systems.length, FORMS.system)}</span></div>
-          <div class="stat"><b>${LEVEL_IDS.length}</b><span>${noun(LEVEL_IDS.length, FORMS.level)}</span></div>
-        </div>
-        <div class="tags level-split">${levelTags}</div>
+        <p class="meta">عدد الأسئلة: ${count(quizLength, QUESTION_FORMS)}</p>
       </section>
       ${notice}
-      ${departments ? `
       <section class="card">
-        <fieldset class="plain">
-          <legend><h2>الإدارة</h2></legend>
-          <p class="muted small" style="margin-bottom:12px">اختر الإدارة التي تعمل بها.</p>
+        ${departments ? `
+        <fieldset>
+          <legend>الإدارة</legend>
           <div class="choice-grid">${departments}</div>
-          <p class="error" id="dept-error" role="alert" hidden>الرجاء اختيار الإدارة قبل البدء.</p>
-        </fieldset>
-      </section>` : ""}
-      <section class="card start-bar">
+          <p class="error" id="dept-error" role="alert" hidden>الرجاء اختيار الإدارة.</p>
+        </fieldset>` : ""}
         ${nameField}
-        <button type="button" class="btn btn-primary btn-block" data-act="start" ${quizLength ? "" : "disabled"}>ابدأ الاختبار (${count(quizLength, FORMS.question)})</button>
-        <p class="small muted">تُختار الأسئلة عشوائياً في كل محاولة، وتظهر الإجابات الصحيحة وسندها النظامي وشرحها بعد إنهاء جميع الأسئلة.</p>
+        <div class="form-actions">
+          <button type="button" class="btn btn-primary" data-act="start" ${quizLength ? "" : "disabled"}>بدء الاستبيان</button>
+        </div>
       </section>`);
   }
 
@@ -267,34 +244,29 @@
     const chosen = state.answers[i];
     const total = state.items.length;
     const answered = state.answers.filter((a) => a != null).length;
-    const tf = q.type === "tf";
     const last = i === total - 1;
 
-    const options = item.order.map((orig, k) => `
+    const options = item.order.map((orig) => `
       <button type="button" class="option" role="radio" aria-checked="${chosen === orig}" data-opt="${orig}">
-        ${tf ? "" : `<span class="letter" aria-hidden="true">${LETTERS[k] || k + 1}</span>`}
+        <span class="dot" aria-hidden="true"></span>
         <span>${esc(q.options[orig])}</span>
       </button>`).join("");
 
     show(`
       <section class="card">
         <div class="q-top">
-          <span class="q-counter">السؤال ${i + 1} من ${total}</span>
-          <div class="tags">
-            <span class="tag lvl-${q.level}">${esc(DATA.levels[q.level])}</span>
-            <span class="tag">${TYPE_LABEL[q.type]}</span>
-          </div>
+          <span>السؤال ${i + 1} من ${total}</span>
+          <span class="muted">${esc(s.name)}</span>
         </div>
         <div class="progress" role="progressbar" aria-label="نسبة الإنجاز" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${answered}">
           <span style="width:${(answered / total) * 100}%"></span>
         </div>
-        <p class="q-system">${esc(s.name)}</p>
         <h1 class="q-text" id="q-text" data-focus tabindex="-1">${esc(q.text)}</h1>
-        <p class="q-hint${q.type === "exclude" ? " warn" : ""}">${TYPE_HINT[q.type]}</p>
-        <div class="options${tf ? " tf" : ""}" role="radiogroup" aria-labelledby="q-text">${options}</div>
+        <p class="q-hint">${TYPE_HINT[q.type]}</p>
+        <div class="options${q.type === "tf" ? " tf" : ""}" role="radiogroup" aria-labelledby="q-text">${options}</div>
         <div class="q-nav">
-          <button type="button" class="btn btn-ghost" data-act="prev" ${i === 0 ? "disabled" : ""}>السابق</button>
-          <button type="button" class="btn btn-primary" data-act="next" ${chosen == null ? "disabled" : ""}>${last ? "إنهاء وعرض النتيجة" : "التالي"}</button>
+          <button type="button" class="btn btn-secondary" data-act="prev" ${i === 0 ? "disabled" : ""}>السابق</button>
+          <button type="button" class="btn btn-primary" data-act="next" ${chosen == null ? "disabled" : ""}>${last ? "إنهاء" : "التالي"}</button>
         </div>
       </section>`);
   }
@@ -320,7 +292,7 @@
       renderQuestion();
       return;
     }
-    if (!window.confirm("هل تريد إنهاء الاختبار وعرض النتيجة؟ لن تتمكن من تعديل إجاباتك بعد ذلك.")) return;
+    if (!window.confirm("هل تريد إنهاء الاستبيان وعرض النتيجة؟ لن تتمكن من تعديل إجاباتك بعد ذلك.")) return;
     state.finishedAt = Date.now();
     saveState();
     reviewFilter = "all";
@@ -345,41 +317,33 @@
     }).filter((g) => g.total);
   }
 
-  function breakdown(groups, labelOf) {
-    return groups.map((g) => `
-      <div class="bd-row">
-        <span class="name">${esc(labelOf(g.k))}</span>
-        <span class="val">${g.ok} / ${g.total} (${g.pct}%)</span>
-        <span class="bar"><span style="width:${g.pct}%"></span></span>
-      </div>`).join("");
-  }
-
   function renderResults() {
     const rows = resultRows();
     const total = rows.length;
     const correct = rows.filter((r) => r.ok).length;
     const pct = Math.round((correct / total) * 100);
-    const rating = pct >= 90 ? "ممتاز" : pct >= 75 ? "جيد جداً" : pct >= 60 ? "جيد" : "يحتاج إلى مراجعة";
-    const color = pct >= 60 ? "var(--correct)" : pct >= 40 ? "var(--lvl2-fg)" : "var(--wrong)";
     const wrong = total - correct;
-
-    const byLevel = groupScores(rows, (r) => r.q.level, LEVEL_IDS);
     const bySystem = groupScores(rows, (r) => r.s.id, DATA.systems.map((s) => s.id));
-    const systemName = (id) => DATA.systems.find((s) => s.id === id).name;
+
+    const systemRows = bySystem.map((g) => `
+      <tr>
+        <td>${esc(DATA.systems.find((s) => s.id === g.k).name)}</td>
+        <td class="num">${g.ok} من ${g.total}</td>
+        <td class="num">${g.pct}%</td>
+      </tr>`).join("");
 
     const review = rows.map((r) => {
-      const opts = r.it.order.map((orig, k) => {
+      const opts = r.it.order.map((orig) => {
         let cls = "", mark = "";
         if (orig === r.q.answer) {
           cls = "correct";
-          mark = r.ok ? "إجابتك — صحيحة" : "الإجابة الصحيحة";
+          mark = r.ok ? "إجابتك (صحيحة)" : "الإجابة الصحيحة";
         } else if (orig === r.a) {
           cls = "chosen-wrong";
           mark = "إجابتك";
         }
         return `
           <li class="${cls}">
-            ${r.q.type === "tf" ? "" : `<span class="letter">${LETTERS[k] || k + 1}</span>`}
             <span class="txt">${esc(r.q.options[orig])}</span>
             ${mark ? `<span class="mark">${mark}</span>` : ""}
           </li>`;
@@ -387,12 +351,8 @@
       return `
         <article class="card review-item ${r.ok ? "is-correct" : "is-wrong"}" data-ok="${r.ok ? 1 : 0}">
           <div class="ri-head">
-            <div class="tags">
-              <span class="tag">سؤال ${r.i + 1}</span>
-              <span class="tag">${esc(r.s.short)}</span>
-              <span class="tag lvl-${r.q.level}">${esc(DATA.levels[r.q.level])}</span>
-            </div>
-            <span class="status">${r.ok ? ICON_CHECK + "إجابة صحيحة" : ICON_X + (r.a == null ? "لم تتم الإجابة" : "إجابة خاطئة")}</span>
+            <span>السؤال ${r.i + 1} <span class="muted">— ${esc(r.s.name)}</span></span>
+            <span class="status">${r.ok ? "صحيحة" : r.a == null ? "لم تتم الإجابة" : "خاطئة"}</span>
           </div>
           <p class="ri-q">${esc(r.q.text)}</p>
           <ul class="ri-options">${opts}</ul>
@@ -403,25 +363,25 @@
 
     show(`
       <section class="card">
-        <div class="score">
-          <div class="ring" style="--p:${pct};--ring-color:${color}" role="img" aria-label="النسبة ${pct}%"><b>${pct}%</b></div>
-          <div class="score-text" style="--ring-color:${color}">
-            <h1 data-focus tabindex="-1">نتيجتك: ${correct} من ${total}</h1>
-            <p class="rating">${rating}</p>
-            ${state.department ? `<p class="muted">الإدارة: ${esc(state.department)}</p>` : ""}
-            ${state.name ? `<p class="muted">المشارك: ${esc(state.name)}</p>` : ""}
-            <p class="muted small">الوقت المستغرق: ${fmtDuration(state.finishedAt - state.startedAt)}</p>
-          </div>
+        <h1 data-focus tabindex="-1">النتيجة</h1>
+        <p class="score"><b>${correct}</b> من ${total} <span class="muted">(${pct}%)</span></p>
+        <dl class="details">
+          ${state.department ? `<div><dt>الإدارة</dt><dd>${esc(state.department)}</dd></div>` : ""}
+          ${state.name ? `<div><dt>الاسم</dt><dd>${esc(state.name)}</dd></div>` : ""}
+          <div><dt>الوقت المستغرق</dt><dd>${fmtDuration(state.finishedAt - state.startedAt)}</dd></div>
+        </dl>
+        ${bySystem.length > 1 ? `
+        <table class="table">
+          <thead><tr><th>النظام</th><th class="num">الإجابات الصحيحة</th><th class="num">النسبة</th></tr></thead>
+          <tbody>${systemRows}</tbody>
+        </table>` : ""}
+        <div class="form-actions no-print">
+          <button type="button" class="btn btn-primary" data-act="retry">محاولة جديدة</button>
+          <button type="button" class="btn btn-secondary" data-act="print">طباعة</button>
         </div>
       </section>
-      ${byLevel.length > 1 ? `<section class="card"><h2>حسب المستوى</h2><div class="breakdown" style="margin-top:12px">${breakdown(byLevel, (l) => DATA.levels[l])}</div></section>` : ""}
-      ${bySystem.length > 1 ? `<section class="card"><h2>حسب النظام</h2><div class="breakdown" style="margin-top:12px">${breakdown(bySystem, systemName)}</div></section>` : ""}
-      <section class="card actions no-print">
-        <button type="button" class="btn btn-primary" data-act="retry">محاولة جديدة بأسئلة مختلفة</button>
-        <button type="button" class="btn btn-ghost" data-act="print">طباعة / حفظ PDF</button>
-      </section>
-      <section class="section" style="margin-top:28px">
-        <h2 style="margin-bottom:8px">مراجعة الإجابات</h2>
+      <section class="section">
+        <h2>مراجعة الإجابات</h2>
         <div class="filters" role="group" aria-label="تصفية الأسئلة">
           <button type="button" class="filter" data-filter="all">الكل (${total})</button>
           <button type="button" class="filter" data-filter="wrong">الخاطئة (${wrong})</button>
@@ -537,6 +497,13 @@
 
   // ---------- boot ----------
   document.getElementById("site-title").textContent = CFG.title;
+  const logo = document.getElementById("logo");
+  if (CFG.logo) {
+    logo.alt = CFG.organization ? "شعار " + CFG.organization : "الشعار";
+    logo.addEventListener("error", () => { logo.hidden = true; });
+    logo.addEventListener("load", () => { logo.hidden = false; });
+    logo.src = CFG.logo;
+  }
   if (state && state.finishedAt) {
     renderResults();
     submitResults();
