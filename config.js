@@ -25,8 +25,11 @@ window.QUIZ_CONFIG = {
   // Shuffle the options of multiple-choice questions for every participant.
   shuffleOptions: true,
 
-  // Optional: collect every participant's result in a Google Sheet.
-  // Paste the Web App URL from tools/google-apps-script.gs here (see README).
-  // While this is empty, nothing is sent anywhere and the name field is hidden.
-  resultsEndpoint: "",
+  // Each finished survey is saved as a row in the Supabase "results" table
+  // (set up with tools/supabase-setup.sql). Both values are public by design: the key
+  // only allows adding rows, not reading them. Empty both to stop collecting.
+  results: {
+    supabaseUrl: "https://vyazmdkvusrzlcexaqpu.supabase.co",
+    supabaseKey: "sb_publishable_TOcWEQU5gZETZ7rM9kjBpg_Vsl_W9K5",
+  },
 };

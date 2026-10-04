@@ -82,21 +82,25 @@ Edit [`config.js`](config.js) to change:
 - the title and introduction text, or whether multiple-choice options are
   shuffled (true/false questions always keep their order).
 
-## Collect results in a Google Sheet (optional)
+## Collected results
 
-By default nothing is sent anywhere: each participant's progress is only
-kept in their own browser. To see everyone's results:
+Each finished survey is saved as one row in a Supabase database table
+(`results`): date, department, name (optional), score, percentage, time
+taken, score per level and per regulation (levels appear only here, not to
+participants), the questions answered wrongly, and every answer.
 
-1. Create a Google Sheet and open **Extensions → Apps Script**.
-2. Paste the contents of [`tools/google-apps-script.gs`](tools/google-apps-script.gs) and save.
-3. **Deploy → New deployment → Web app**, with *Execute as: Me* and
-   *Who has access: Anyone*. Copy the Web app URL.
-4. Paste the URL into `resultsEndpoint` in `config.js` and commit.
-
-The start page then also asks for the participant's name, and each finished
-quiz adds a row to the sheet: date, department, name, score, percentage,
-time taken, score per level and per regulation (levels appear only here, not
-to participants), and the questions answered wrongly. Filter or pivot on the department column to compare departments.
+- **See or download them:** sign in at supabase.com → your project →
+  **Table Editor → results**. Use **Export → CSV** and open the file in Excel;
+  filter or pivot on the `department` column to compare departments.
+- **Setup** (already done for this project): run
+  [`tools/supabase-setup.sql`](tools/supabase-setup.sql) in **SQL Editor**, then
+  put the Project URL and publishable key in `results` in `config.js`. The key
+  is public by design: it can only add rows, never read them.
+- **Free plan:** a project with no activity for 7 days is paused. Data is
+  kept; press **Restore** in the dashboard before the next round of answers.
+- **Turn off collection:** empty both values in `results` in `config.js`.
+- If sending fails (offline, project paused), the participant still sees
+  their results and the site retries the next time they open them.
 
 ## Good to know
 
@@ -113,8 +117,8 @@ to participants), and the questions answered wrongly. Filter or pivot on the dep
 | `index.html`, `assets/style.css`, `assets/app.js` | The website |
 | `assets/questions.js` | Questions generated from the spreadsheet (do not edit by hand) |
 | `assets/logo.png` (from `assets/logo.svg`), `assets/favicon.png`, `assets/apple-touch-icon.png` | Ministry logo and icons |
-| `config.js` | Questions per level, departments, title, intro text and optional results URL |
+| `config.js` | Questions per level, departments, title, intro text and where results are saved |
 | `data/questions.xlsx` | The question bank (source of truth) |
 | `scripts/build_questions.py` | Spreadsheet → `assets/questions.js` converter |
 | `.github/workflows/update-questions.yml` | Re-runs the converter when the spreadsheet changes |
-| `tools/google-apps-script.gs` | Optional Google Sheets results collector |
+| `tools/supabase-setup.sql` | Creates the results table in Supabase |

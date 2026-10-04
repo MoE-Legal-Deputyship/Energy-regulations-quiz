@@ -9,11 +9,16 @@
       questionsPerLevel: { 1: 10, 2: 9, 3: 6 },
       departments: [],
       shuffleOptions: true,
-      resultsEndpoint: "",
+      results: { supabaseUrl: "", supabaseKey: "" },
     },
     window.QUIZ_CONFIG || {}
   );
   const STORAGE_KEY = "energy-regulations-quiz:v2";
+  // Where finished results are stored (a Supabase "results" table); empty = not collected.
+  const RESULTS = CFG.results || {};
+  const RESULTS_URL = RESULTS.supabaseUrl && RESULTS.supabaseKey
+    ? String(RESULTS.supabaseUrl).trim().replace(/\/+$/, "").replace(/\/rest\/v1$/, "") + "/rest/v1/results"
+    : "";
   const SHOWN_KEY = "energy-regulations-quiz:shown";
   const app = document.getElementById("app");
 
@@ -144,7 +149,6 @@
 
   // ---------- start screen ----------
   function renderStart() {
-    const collect = !!String(CFG.resultsEndpoint || "").trim();
     let notice = "";
     if (state && !state.finishedAt) {
       const done = state.answers.filter((a) => a != null).length;
@@ -168,9 +172,9 @@
         <span class="label">${esc(d)}</span>
       </label>`).join("");
 
-    const nameField = collect ? `
+    const nameField = RESULTS_URL ? `
       <div class="field">
-        <label for="name">الاسم</label>
+        <label for="name">الاسم <span class="muted">(اختياري)</span></label>
         <input id="name" name="name" autocomplete="name" maxlength="80" value="${esc(form.name)}">
       </div>` : "";
 
@@ -192,6 +196,7 @@
         <div class="form-actions">
           <button type="button" class="btn btn-primary" data-act="start" ${quizLength ? "" : "disabled"}>بدء الاستبيان</button>
         </div>
+        ${RESULTS_URL ? '<p class="note">تُسجَّل نتيجتك مع الإدارة لأغراض قياس الفهم.</p>' : ""}
       </section>`);
   }
 
@@ -221,14 +226,6 @@
     if (deptError && !form.department) {
       deptError.hidden = false;
       app.querySelector('input[name="department"]').focus();
-      return;
-    }
-    const nameInput = app.querySelector("#name");
-    if (nameInput && !nameInput.value.trim()) {
-      nameInput.focus();
-      nameInput.setCustomValidity("الرجاء كتابة الاسم");
-      nameInput.reportValidity();
-      nameInput.addEventListener("input", () => nameInput.setCustomValidity(""), { once: true });
       return;
     }
     startQuiz({ department: form.department, name: form.name.trim() });
@@ -405,33 +402,36 @@
     if (empty) empty.hidden = visible > 0;
   }
 
-  // Optional: send the result to a Google Apps Script web app (see README).
+  // Optional: store the result as one row in the Supabase "results" table (see README).
+  // Column names match tools/supabase-setup.sql.
   function submitResults() {
-    const url = String(CFG.resultsEndpoint || "").trim();
-    if (!url || !state || state.submitted) return;
+    if (!RESULTS_URL || !state || state.submitted) return;
     const rows = resultRows();
     const correct = rows.filter((r) => r.ok).length;
     const summary = (groups, labelOf) => groups.map((g) => labelOf(g.k) + ": " + g.ok + "/" + g.total).join(" | ");
-    const payload = {
-      timestamp: new Date(state.finishedAt).toISOString(),
-      department: state.department,
-      name: state.name,
+    const row = {
+      department: state.department || null,
+      name: state.name || null,
       score: correct,
       total: rows.length,
       percent: Math.round((correct / rows.length) * 100),
-      durationSeconds: Math.round((state.finishedAt - state.startedAt) / 1000),
-      byLevel: summary(groupScores(rows, (r) => r.q.level, LEVEL_IDS), (l) => DATA.levels[l]),
-      bySystem: summary(groupScores(rows, (r) => r.s.id, DATA.systems.map((s) => s.id)),
+      duration_seconds: Math.round((state.finishedAt - state.startedAt) / 1000),
+      by_level: summary(groupScores(rows, (r) => r.q.level, LEVEL_IDS), (l) => DATA.levels[l]),
+      by_system: summary(groupScores(rows, (r) => r.s.id, DATA.systems.map((s) => s.id)),
         (id) => DATA.systems.find((s) => s.id === id).short),
       wrong: rows.filter((r) => !r.ok).map((r) => r.s.short + " - سؤال " + r.q.n).join(" | "),
       answers: rows.map((r) => ({ id: r.q.id, chosen: r.a == null ? "" : r.q.options[r.a], correct: r.ok })),
     };
-    fetch(url, {
+    fetch(RESULTS_URL, {
       method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload),
-    }).then(() => {
+      headers: {
+        apikey: RESULTS.supabaseKey,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify(row),
+    }).then((res) => {
+      if (!res.ok) return; // retried next time the results are shown
       state.submitted = true;
       saveState();
     }).catch(() => { /* offline: retried next time the results are shown */ });
