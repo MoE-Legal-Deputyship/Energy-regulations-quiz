@@ -5,9 +5,9 @@
   --text: #1f2326;
   --muted: #646b70;
   --border: #d9dcdf;
-  --primary: #00704a;
-  --primary-dark: #005a3b;
-  --primary-tint: #eef6f2;
+  --primary: #173f35;
+  --primary-dark: #0f2c24;
+  --primary-tint: #eef3f1;
   --correct: #12784f;
   --correct-tint: #ebf6f0;
   --wrong: #b3261e;
@@ -70,7 +70,7 @@ p { margin: 0; }
 .intro p { color: var(--muted); }
 .intro .meta { margin-top: 12px; color: var(--text); font-weight: 700; }
 
-.notice { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; background: var(--primary-tint); border-color: #cfe3d9; }
+.notice { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; background: var(--primary-tint); border-color: #cddbd6; }
 
 /* Buttons */
 .btn {

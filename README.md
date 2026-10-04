@@ -47,13 +47,11 @@ Share that link with participants. To use your own domain instead
 (for example `quiz.example.com`), enter it under **Custom domain** on the
 same page and follow GitHub's DNS instructions.
 
-## Add the logo
+## Logo
 
-Upload the ministry logo as `assets/logo.png` (on GitHub: open the `assets`
-folder, *Add file → Upload files*, and name the file `logo.png`). It appears
-in the header and as the browser-tab icon. For an SVG or JPG, upload it and
-change `logo` in `config.js` to match. Until the file exists the header shows
-the title only.
+The ministry logo is `assets/logo.svg` (shown in the header); the browser-tab
+icon `assets/favicon.svg` is the same file cropped to the emblem. To replace
+the logo, upload a new file and point `logo` in `config.js` at it.
 
 ## Update the questions
 
@@ -108,6 +106,7 @@ to participants), and the questions answered wrongly. Filter or pivot on the dep
 |---|---|
 | `index.html`, `assets/style.css`, `assets/app.js` | The website |
 | `assets/questions.js` | Questions generated from the spreadsheet (do not edit by hand) |
+| `assets/logo.svg`, `assets/favicon.svg` | Ministry logo and tab icon |
 | `config.js` | Logo path, questions per level, departments, title, intro text and optional results URL |
 | `data/questions.xlsx` | The question bank (source of truth) |
 | `scripts/build_questions.py` | Spreadsheet → `assets/questions.js` converter |

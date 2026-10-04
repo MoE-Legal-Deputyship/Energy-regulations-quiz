@@ -5,10 +5,9 @@ window.QUIZ_CONFIG = {
     "يهدف هذا الاستبيان إلى قياس فهم أنظمة قطاع الطاقة. تُختار الأسئلة عشوائياً في كل محاولة، " +
     "وبعد الإنهاء تظهر نتيجتك مع الإجابة الصحيحة لكل سؤال وسندها النظامي وشرح مبسط لها.",
 
-  // Logo shown in the header. Upload the image to this path (PNG or SVG; change the
-  // extension here if needed). While the file is missing the header shows the title only.
+  // Logo shown in the header. To replace it, upload a new file and update this path.
   organization: "وزارة الطاقة",
-  logo: "assets/logo.png",
+  logo: "assets/logo.svg",
 
   // Questions drawn from each level in one attempt (1 = الأول (تأسيسي), 2 = المتوسط, 3 = المتقدم).
   // 10 + 9 + 6 = 25 questions. Levels are used for the draw only and are not shown to participants.
