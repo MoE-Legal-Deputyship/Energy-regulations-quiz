@@ -4,11 +4,30 @@ An Arabic, mobile-friendly quiz website built from the question bank in
 [`data/questions.xlsx`](data/questions.xlsx): 103 questions across 6
 regulations and 3 levels.
 
-Participants choose which regulations and levels to answer, go through the
-questions one at a time, and, once they finish, see their score with each
-question's correct answer, its legal reference (السند النظامي) and the
-simple explanation (شرح مبسط). The review-notes column (ملاحظات للمراجعة)
-is internal and is never shown on the site.
+Participants pick their department, answer 25 questions one at a time, and,
+once they finish, see their score (overall, per level and per regulation)
+with each question's correct answer, its legal reference (السند النظامي) and
+the simple explanation (شرح مبسط). The review-notes column
+(ملاحظات للمراجعة) is internal and is never shown on the site.
+
+## How the 25 questions are chosen
+
+Every attempt draws a fresh set from the bank:
+
+| Level | Questions per attempt | In the bank |
+|---|---|---|
+| الأول (تأسيسي) | 10 | 26 |
+| المتوسط | 9 | 39 |
+| المتقدم | 6 | 38 |
+
+- Each level's share is spread across the six regulations, so every
+  attempt covers all of them (4–5 questions each).
+- Questions run from foundational to advanced; their order within a level
+  and the order of the options are shuffled.
+- The browser remembers which questions it has already shown and prefers
+  ones it has not, so a second attempt on the same device gets a completely
+  new set. From the third attempt some foundational questions come back,
+  since the bank has only 26 of them.
 
 It is a static site (plain HTML, CSS and JavaScript), so it can be hosted
 for free on GitHub Pages at a link like
@@ -42,9 +61,13 @@ one of its options exactly, or if a level or question type is not recognised.
 
 ## Settings
 
-Edit [`config.js`](config.js) to change the title, the introduction text, or
-whether multiple-choice options are shuffled (they are by default; true/false
-questions keep their order).
+Edit [`config.js`](config.js) to change:
+
+- `questionsPerLevel`: how many questions each level contributes (the total is
+  the quiz length);
+- `departments`: the list participants must choose from;
+- the title and introduction text, or whether multiple-choice options are
+  shuffled (true/false questions always keep their order).
 
 ## Collect results in a Google Sheet (optional)
 
@@ -57,9 +80,10 @@ kept in their own browser. To see everyone's results:
    *Who has access: Anyone*. Copy the Web app URL.
 4. Paste the URL into `resultsEndpoint` in `config.js` and commit.
 
-The start page then asks for the participant's name, and each finished quiz
-adds a row (name, regulations, levels, score, percentage, time taken and
-the questions answered wrongly) to the sheet.
+The start page then also asks for the participant's name, and each finished
+quiz adds a row to the sheet: date, department, name, score, percentage,
+time taken, score per level and per regulation, and the questions answered
+wrongly. Filter or pivot on the department column to compare departments.
 
 ## Good to know
 
@@ -75,7 +99,7 @@ the questions answered wrongly) to the sheet.
 |---|---|
 | `index.html`, `assets/style.css`, `assets/app.js` | The website |
 | `assets/questions.js` | Questions generated from the spreadsheet (do not edit by hand) |
-| `config.js` | Title, intro text and optional results URL |
+| `config.js` | Questions per level, departments, title, intro text and optional results URL |
 | `data/questions.xlsx` | The question bank (source of truth) |
 | `scripts/build_questions.py` | Spreadsheet → `assets/questions.js` converter |
 | `.github/workflows/update-questions.yml` | Re-runs the converter when the spreadsheet changes |

@@ -3,10 +3,18 @@
 
   const DATA = window.QUIZ_DATA;
   const CFG = Object.assign(
-    { title: "استبيان قياس فهم أنظمة قطاع الطاقة", intro: "", shuffleOptions: true, resultsEndpoint: "" },
+    {
+      title: "استبيان قياس فهم أنظمة قطاع الطاقة",
+      intro: "",
+      questionsPerLevel: { 1: 10, 2: 9, 3: 6 },
+      departments: [],
+      shuffleOptions: true,
+      resultsEndpoint: "",
+    },
     window.QUIZ_CONFIG || {}
   );
-  const STORAGE_KEY = "energy-regulations-quiz:v1";
+  const STORAGE_KEY = "energy-regulations-quiz:v2";
+  const SHOWN_KEY = "energy-regulations-quiz:shown";
   const app = document.getElementById("app");
 
   const LETTERS = ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح"];
@@ -35,6 +43,13 @@
   DATA.systems.forEach((s) => s.questions.forEach((q) => byId.set(q.id, { q, s })));
   const LEVEL_IDS = Object.keys(DATA.levels).map(Number);
   const allQuestions = DATA.systems.flatMap((s) => s.questions);
+
+  // How many questions each level contributes to one attempt (capped by what the bank holds).
+  const levelQuota = new Map(LEVEL_IDS.map((l) => {
+    const wanted = Math.max(0, Math.floor(Number((CFG.questionsPerLevel || {})[l]) || 0));
+    return [l, Math.min(wanted, allQuestions.filter((q) => q.level === l).length)];
+  }));
+  const quizLength = [...levelQuota.values()].reduce((a, b) => a + b, 0);
 
   function esc(v) {
     return String(v == null ? "" : v).replace(/[&<>"']/g, (c) =>
@@ -80,40 +95,69 @@
   }
 
   // ---------- persistence (per-browser convenience only) ----------
-  function loadState() {
+  function readJSON(key, fallback) {
     try {
-      const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-      const ok =
-        s && Array.isArray(s.items) && s.items.length && Array.isArray(s.answers) &&
-        s.items.every((it) => byId.has(it.id) && Array.isArray(it.order) &&
-          it.order.length === byId.get(it.id).q.options.length);
-      return ok ? s : null;
+      const v = JSON.parse(localStorage.getItem(key) || "null");
+      return v == null ? fallback : v;
     } catch (e) {
-      return null;
+      return fallback;
     }
   }
-  function saveState() {
+  function writeJSON(key, value) {
     try {
-      if (state) localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      else localStorage.removeItem(STORAGE_KEY);
+      if (value == null) localStorage.removeItem(key);
+      else localStorage.setItem(key, JSON.stringify(value));
     } catch (e) { /* storage unavailable: the quiz still works for this visit */ }
   }
 
+  function loadState() {
+    const s = readJSON(STORAGE_KEY, null);
+    const ok =
+      s && Array.isArray(s.items) && s.items.length && Array.isArray(s.answers) &&
+      s.items.every((it) => byId.has(it.id) && Array.isArray(it.order) &&
+        it.order.length === byId.get(it.id).q.options.length);
+    return ok ? s : null;
+  }
+  function saveState() { writeJSON(STORAGE_KEY, state); }
+
   let state = loadState();
-  const sel = {
-    systems: new Set(DATA.systems.map((s) => s.id)),
-    levels: new Set(LEVEL_IDS),
-    name: "",
-  };
+  const form = { department: "", name: "" };
   let reviewFilter = "all";
 
-  // ---------- start screen ----------
-  function selectedQuestions() {
-    return DATA.systems
-      .filter((s) => sel.systems.has(s.id))
-      .flatMap((s) => s.questions.filter((q) => sel.levels.has(q.level)));
+  // ---------- question draw ----------
+  // Each attempt takes levelQuota questions per level, spread as evenly as possible
+  // across the regulations, preferring the questions this browser has shown the
+  // fewest times — so a second attempt gets different questions until the bank runs out.
+  function drawQuestions() {
+    const shown = readJSON(SHOWN_KEY, {});
+    const times = (q) => shown[q.id] || 0;
+    const perSystem = new Map(DATA.systems.map((s) => [s.id, 0]));
+    const picked = [];
+
+    LEVEL_IDS.forEach((level) => {
+      const pools = DATA.systems.map((s) => ({
+        s,
+        qs: shuffle(s.questions.filter((q) => q.level === level)).sort((a, b) => times(a) - times(b)),
+      }));
+      const levelPicks = [];
+      // A regulation's next question costs 1 per question already taken from that
+      // regulation and 2 per earlier showing, so fresh questions win over perfect balance.
+      const cost = (p) => perSystem.get(p.s.id) + 2 * times(p.qs[0]);
+      for (let n = 0; n < levelQuota.get(level); n++) {
+        const open = shuffle(pools.filter((p) => p.qs.length)).sort((a, b) => cost(a) - cost(b));
+        if (!open.length) break;
+        levelPicks.push(open[0].qs.shift());
+        perSystem.set(open[0].s.id, perSystem.get(open[0].s.id) + 1);
+      }
+      picked.push(...shuffle(levelPicks)); // foundational → intermediate → advanced
+    });
+
+    picked.forEach((q) => { shown[q.id] = times(q) + 1; });
+    writeJSON(SHOWN_KEY, shown);
+    return picked;
   }
 
+  // ---------- start screen ----------
   function renderStart() {
     const collect = !!String(CFG.resultsEndpoint || "").trim();
     let notice = "";
@@ -122,36 +166,30 @@
       notice = `
         <section class="card notice">
           <p>لديك اختبار لم يكتمل: أجبت عن ${done} من ${state.items.length}.</p>
-          <button class="btn btn-primary" data-act="resume">متابعة الاختبار</button>
+          <button type="button" class="btn btn-primary" data-act="resume">متابعة الاختبار</button>
         </section>`;
     } else if (state && state.finishedAt) {
       notice = `
         <section class="card notice">
           <p>أنهيت اختباراً سابقاً على هذا الجهاز.</p>
-          <button class="btn btn-ghost" data-act="show-results">عرض النتيجة السابقة</button>
+          <button type="button" class="btn btn-ghost" data-act="show-results">عرض النتيجة السابقة</button>
         </section>`;
     }
 
-    const systems = DATA.systems.map((s) => `
-      <label class="choice" data-system="${s.id}">
-        <input type="checkbox" name="system" value="${s.id}" ${sel.systems.has(s.id) ? "checked" : ""}>
-        <span class="box">${BOX_CHECK}</span>
-        <span class="label">${esc(s.name)}</span>
-        <span class="count"></span>
-      </label>`).join("");
+    const levelTags = LEVEL_IDS.filter((l) => levelQuota.get(l)).map((l) =>
+      `<span class="tag lvl-${l}">${esc(DATA.levels[l])}: ${levelQuota.get(l)}</span>`).join("");
 
-    const levels = LEVEL_IDS.map((l) => `
-      <label class="choice" data-level="${l}">
-        <input type="checkbox" name="level" value="${l}" ${sel.levels.has(l) ? "checked" : ""}>
+    const departments = (CFG.departments || []).map((d) => `
+      <label class="choice radio">
+        <input type="radio" name="department" value="${esc(d)}" ${form.department === d ? "checked" : ""}>
         <span class="box">${BOX_CHECK}</span>
-        <span class="label"><span class="tag lvl-${l}">${esc(DATA.levels[l])}</span></span>
-        <span class="count"></span>
+        <span class="label">${esc(d)}</span>
       </label>`).join("");
 
     const nameField = collect ? `
       <div class="field">
         <label for="name">الاسم</label>
-        <input id="name" name="name" autocomplete="name" maxlength="80" value="${esc(sel.name)}" placeholder="اكتب اسمك">
+        <input id="name" name="name" autocomplete="name" maxlength="80" value="${esc(form.name)}" placeholder="اكتب اسمك">
       </div>` : "";
 
     show(`
@@ -159,72 +197,39 @@
         <h1 data-focus tabindex="-1">${esc(CFG.title)}</h1>
         <p>${esc(CFG.intro)}</p>
         <div class="stats">
+          <div class="stat"><b>${quizLength}</b><span>${noun(quizLength, FORMS.question)} في كل محاولة</span></div>
           <div class="stat"><b>${DATA.systems.length}</b><span>${noun(DATA.systems.length, FORMS.system)}</span></div>
-          <div class="stat"><b>${allQuestions.length}</b><span>${noun(allQuestions.length, FORMS.question)}</span></div>
           <div class="stat"><b>${LEVEL_IDS.length}</b><span>${noun(LEVEL_IDS.length, FORMS.level)}</span></div>
         </div>
+        <div class="tags level-split">${levelTags}</div>
       </section>
       ${notice}
+      ${departments ? `
       <section class="card">
-        <div class="section-head">
-          <h2>الأنظمة</h2>
-          <button type="button" class="link-btn" data-act="toggle-systems"></button>
-        </div>
-        <div class="choice-grid">${systems}</div>
-      </section>
-      <section class="card">
-        <div class="section-head"><h2>المستوى</h2></div>
-        <div class="chips">${levels}</div>
-      </section>
+        <fieldset class="plain">
+          <legend><h2>الإدارة</h2></legend>
+          <p class="muted small" style="margin-bottom:12px">اختر الإدارة التي تعمل بها.</p>
+          <div class="choice-grid">${departments}</div>
+          <p class="error" id="dept-error" role="alert" hidden>الرجاء اختيار الإدارة قبل البدء.</p>
+        </fieldset>
+      </section>` : ""}
       <section class="card start-bar">
         ${nameField}
-        <button type="button" class="btn btn-primary btn-block" data-act="start"></button>
-        <p class="small muted">تظهر الإجابات الصحيحة وسندها النظامي وشرحها بعد إنهاء جميع الأسئلة.</p>
+        <button type="button" class="btn btn-primary btn-block" data-act="start" ${quizLength ? "" : "disabled"}>ابدأ الاختبار (${count(quizLength, FORMS.question)})</button>
+        <p class="small muted">تُختار الأسئلة عشوائياً في كل محاولة، وتظهر الإجابات الصحيحة وسندها النظامي وشرحها بعد إنهاء جميع الأسئلة.</p>
       </section>`);
-    updateStartCounts();
   }
 
-  function updateStartCounts() {
-    DATA.systems.forEach((s) => {
-      const n = s.questions.filter((q) => sel.levels.has(q.level)).length;
-      const el = app.querySelector(`[data-system="${s.id}"]`);
-      el.querySelector(".count").textContent = n;
-      el.classList.toggle("disabled", n === 0);
-    });
-    LEVEL_IDS.forEach((l) => {
-      const n = DATA.systems.filter((s) => sel.systems.has(s.id))
-        .reduce((acc, s) => acc + s.questions.filter((q) => q.level === l).length, 0);
-      app.querySelector(`[data-level="${l}"] .count`).textContent = n;
-    });
-    const total = selectedQuestions().length;
-    const btn = app.querySelector('[data-act="start"]');
-    btn.disabled = total === 0;
-    btn.textContent = total ? "ابدأ الاختبار (" + count(total, FORMS.question) + ")" : "اختر نظاماً ومستوى واحداً على الأقل";
-    app.querySelector('[data-act="toggle-systems"]').textContent =
-      sel.systems.size === DATA.systems.length ? "إلغاء تحديد الكل" : "تحديد الكل";
-  }
-
-  function startQuiz(reuse) {
-    const systems = reuse ? reuse.systems : [...sel.systems];
-    const levels = reuse ? reuse.levels : [...sel.levels];
-    const items = [];
-    DATA.systems.forEach((s) => {
-      if (!systems.includes(s.id)) return;
-      s.questions
-        .map((q, i) => ({ q, i }))
-        .filter(({ q }) => levels.includes(q.level))
-        .sort((a, b) => a.q.level - b.q.level || a.i - b.i) // foundational → advanced
-        .forEach(({ q }) => {
-          const order = q.options.map((_, i) => i);
-          if (CFG.shuffleOptions && q.type !== "tf") shuffle(order);
-          items.push({ id: q.id, order });
-        });
+  function startQuiz(who) {
+    const items = drawQuestions().map((q) => {
+      const order = q.options.map((_, i) => i);
+      if (CFG.shuffleOptions && q.type !== "tf") shuffle(order);
+      return { id: q.id, order };
     });
     if (!items.length) return;
     state = {
-      name: reuse ? reuse.name : sel.name.trim(),
-      systems,
-      levels,
+      department: who.department,
+      name: who.name,
       items,
       answers: items.map(() => null),
       current: 0,
@@ -234,6 +239,24 @@
     };
     saveState();
     renderQuestion();
+  }
+
+  function startFromForm() {
+    const deptError = app.querySelector("#dept-error");
+    if (deptError && !form.department) {
+      deptError.hidden = false;
+      app.querySelector('input[name="department"]').focus();
+      return;
+    }
+    const nameInput = app.querySelector("#name");
+    if (nameInput && !nameInput.value.trim()) {
+      nameInput.focus();
+      nameInput.setCustomValidity("الرجاء كتابة الاسم");
+      nameInput.reportValidity();
+      nameInput.addEventListener("input", () => nameInput.setCustomValidity(""), { once: true });
+      return;
+    }
+    startQuiz({ department: form.department, name: form.name.trim() });
   }
 
   // ---------- question screen ----------
@@ -314,19 +337,21 @@
     });
   }
 
-  function breakdown(rows, keyOf, labelOf, keys) {
+  function groupScores(rows, keyOf, keys) {
     return keys.map((k) => {
       const group = rows.filter((r) => keyOf(r) === k);
-      if (!group.length) return "";
       const ok = group.filter((r) => r.ok).length;
-      const pct = Math.round((ok / group.length) * 100);
-      return `
-        <div class="bd-row">
-          <span class="name">${esc(labelOf(k))}</span>
-          <span class="val">${ok} / ${group.length} (${pct}%)</span>
-          <span class="bar"><span style="width:${pct}%"></span></span>
-        </div>`;
-    }).join("");
+      return { k, ok, total: group.length, pct: group.length ? Math.round((ok / group.length) * 100) : 0 };
+    }).filter((g) => g.total);
+  }
+
+  function breakdown(groups, labelOf) {
+    return groups.map((g) => `
+      <div class="bd-row">
+        <span class="name">${esc(labelOf(g.k))}</span>
+        <span class="val">${g.ok} / ${g.total} (${g.pct}%)</span>
+        <span class="bar"><span style="width:${g.pct}%"></span></span>
+      </div>`).join("");
   }
 
   function renderResults() {
@@ -338,14 +363,9 @@
     const color = pct >= 60 ? "var(--correct)" : pct >= 40 ? "var(--lvl2-fg)" : "var(--wrong)";
     const wrong = total - correct;
 
-    const sysIds = DATA.systems.map((s) => s.id).filter((id) => rows.some((r) => r.s.id === id));
-    const lvlIds = LEVEL_IDS.filter((l) => rows.some((r) => r.q.level === l));
-    const bySystem = sysIds.length > 1
-      ? `<section class="card"><h2>حسب النظام</h2><div class="breakdown" style="margin-top:12px">${breakdown(rows, (r) => r.s.id, (id) => DATA.systems.find((s) => s.id === id).name, sysIds)}</div></section>`
-      : "";
-    const byLevel = lvlIds.length > 1
-      ? `<section class="card"><h2>حسب المستوى</h2><div class="breakdown" style="margin-top:12px">${breakdown(rows, (r) => r.q.level, (l) => DATA.levels[l], lvlIds)}</div></section>`
-      : "";
+    const byLevel = groupScores(rows, (r) => r.q.level, LEVEL_IDS);
+    const bySystem = groupScores(rows, (r) => r.s.id, DATA.systems.map((s) => s.id));
+    const systemName = (id) => DATA.systems.find((s) => s.id === id).name;
 
     const review = rows.map((r) => {
       const opts = r.it.order.map((orig, k) => {
@@ -388,16 +408,16 @@
           <div class="score-text" style="--ring-color:${color}">
             <h1 data-focus tabindex="-1">نتيجتك: ${correct} من ${total}</h1>
             <p class="rating">${rating}</p>
+            ${state.department ? `<p class="muted">الإدارة: ${esc(state.department)}</p>` : ""}
             ${state.name ? `<p class="muted">المشارك: ${esc(state.name)}</p>` : ""}
             <p class="muted small">الوقت المستغرق: ${fmtDuration(state.finishedAt - state.startedAt)}</p>
           </div>
         </div>
       </section>
-      ${bySystem}
-      ${byLevel}
+      ${byLevel.length > 1 ? `<section class="card"><h2>حسب المستوى</h2><div class="breakdown" style="margin-top:12px">${breakdown(byLevel, (l) => DATA.levels[l])}</div></section>` : ""}
+      ${bySystem.length > 1 ? `<section class="card"><h2>حسب النظام</h2><div class="breakdown" style="margin-top:12px">${breakdown(bySystem, systemName)}</div></section>` : ""}
       <section class="card actions no-print">
-        <button type="button" class="btn btn-primary" data-act="retry">إعادة الاختبار نفسه</button>
-        <button type="button" class="btn btn-ghost" data-act="new">اختبار جديد</button>
+        <button type="button" class="btn btn-primary" data-act="retry">محاولة جديدة بأسئلة مختلفة</button>
         <button type="button" class="btn btn-ghost" data-act="print">طباعة / حفظ PDF</button>
       </section>
       <section class="section" style="margin-top:28px">
@@ -433,15 +453,18 @@
     if (!url || !state || state.submitted) return;
     const rows = resultRows();
     const correct = rows.filter((r) => r.ok).length;
+    const summary = (groups, labelOf) => groups.map((g) => labelOf(g.k) + ": " + g.ok + "/" + g.total).join(" | ");
     const payload = {
       timestamp: new Date(state.finishedAt).toISOString(),
+      department: state.department,
       name: state.name,
-      systems: DATA.systems.filter((s) => state.systems.includes(s.id)).map((s) => s.name).join("، "),
-      levels: state.levels.map((l) => DATA.levels[l]).join("، "),
       score: correct,
       total: rows.length,
       percent: Math.round((correct / rows.length) * 100),
       durationSeconds: Math.round((state.finishedAt - state.startedAt) / 1000),
+      byLevel: summary(groupScores(rows, (r) => r.q.level, LEVEL_IDS), (l) => DATA.levels[l]),
+      bySystem: summary(groupScores(rows, (r) => r.s.id, DATA.systems.map((s) => s.id)),
+        (id) => DATA.systems.find((s) => s.id === id).short),
       wrong: rows.filter((r) => !r.ok).map((r) => r.s.short + " - سؤال " + r.q.n).join(" | "),
       answers: rows.map((r) => ({ id: r.q.id, chosen: r.a == null ? "" : r.q.options[r.a], correct: r.ok })),
     };
@@ -458,18 +481,15 @@
 
   // ---------- events ----------
   app.addEventListener("change", (e) => {
-    const t = e.target;
-    if (t.name === "system") {
-      t.checked ? sel.systems.add(Number(t.value)) : sel.systems.delete(Number(t.value));
-      updateStartCounts();
-    } else if (t.name === "level") {
-      t.checked ? sel.levels.add(Number(t.value)) : sel.levels.delete(Number(t.value));
-      updateStartCounts();
+    if (e.target.name === "department") {
+      form.department = e.target.value;
+      const err = app.querySelector("#dept-error");
+      if (err) err.hidden = true;
     }
   });
 
   app.addEventListener("input", (e) => {
-    if (e.target.id === "name") sel.name = e.target.value;
+    if (e.target.id === "name") form.name = e.target.value;
   });
 
   app.addEventListener("click", (e) => {
@@ -485,33 +505,14 @@
     const act = e.target.closest("[data-act]");
     if (!act || act.disabled) return;
     switch (act.dataset.act) {
-      case "toggle-systems": {
-        const all = sel.systems.size === DATA.systems.length;
-        sel.systems = new Set(all ? [] : DATA.systems.map((s) => s.id));
-        app.querySelectorAll('input[name="system"]').forEach((c) => { c.checked = !all; });
-        updateStartCounts();
-        break;
-      }
-      case "start": {
-        const nameInput = app.querySelector("#name");
-        if (nameInput && !nameInput.value.trim()) {
-          nameInput.focus();
-          nameInput.setCustomValidity("الرجاء كتابة الاسم");
-          nameInput.reportValidity();
-          nameInput.addEventListener("input", () => nameInput.setCustomValidity(""), { once: true });
-          return;
-        }
-        startQuiz();
-        break;
-      }
+      case "start": startFromForm(); break;
       case "resume": renderQuestion(); break;
       case "show-results": renderResults(); submitResults(); break;
       case "prev":
         if (state.current > 0) { state.current--; saveState(); renderQuestion(); }
         break;
       case "next": next(); break;
-      case "retry": startQuiz({ systems: state.systems, levels: state.levels, name: state.name }); break;
-      case "new": state = null; saveState(); renderStart(); break;
+      case "retry": startQuiz({ department: state.department, name: state.name }); break;
       case "print": reviewFilter = "all"; applyFilter(); window.print(); break;
     }
   });

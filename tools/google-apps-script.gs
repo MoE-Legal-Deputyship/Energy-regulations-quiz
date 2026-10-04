@@ -12,8 +12,8 @@
  */
 const SHEET_NAME = "النتائج";
 const HEADERS = [
-  "التاريخ", "الاسم", "الأنظمة", "المستويات", "الدرجة", "عدد الأسئلة",
-  "النسبة %", "المدة (ثانية)", "الأسئلة الخاطئة", "تفاصيل الإجابات",
+  "التاريخ", "الإدارة", "الاسم", "الدرجة", "عدد الأسئلة", "النسبة %",
+  "المدة (ثانية)", "حسب المستوى", "حسب النظام", "الأسئلة الخاطئة", "تفاصيل الإجابات",
 ];
 
 function doPost(e) {
@@ -27,13 +27,14 @@ function doPost(e) {
   }
   sheet.appendRow([
     new Date(data.timestamp),
+    String(data.department || "").slice(0, 120),
     String(data.name || "").slice(0, 80),
-    data.systems,
-    data.levels,
     data.score,
     data.total,
     data.percent,
     data.durationSeconds,
+    data.byLevel,
+    data.bySystem,
     data.wrong,
     JSON.stringify(data.answers || []),
   ]);
