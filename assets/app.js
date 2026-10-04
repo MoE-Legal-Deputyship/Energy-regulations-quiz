@@ -6,8 +6,6 @@
     {
       title: "استبيان قياس فهم أنظمة قطاع الطاقة",
       intro: "",
-      organization: "",
-      logo: "",
       questionsPerLevel: { 1: 10, 2: 9, 3: 6 },
       departments: [],
       shuffleOptions: true,
@@ -497,13 +495,6 @@
 
   // ---------- boot ----------
   document.getElementById("site-title").textContent = CFG.title;
-  const logo = document.getElementById("logo");
-  if (CFG.logo) {
-    logo.alt = CFG.organization ? "شعار " + CFG.organization : "الشعار";
-    logo.addEventListener("error", () => { logo.hidden = true; });
-    logo.addEventListener("load", () => { logo.hidden = false; });
-    logo.src = CFG.logo;
-  }
   if (state && state.finishedAt) {
     renderResults();
     submitResults();

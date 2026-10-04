@@ -49,9 +49,15 @@ same page and follow GitHub's DNS instructions.
 
 ## Logo
 
-The ministry logo is `assets/logo.svg` (shown in the header); the browser-tab
-icon `assets/favicon.svg` is the same file cropped to the emblem. To replace
-the logo, upload a new file and point `logo` in `config.js` at it.
+The header shows `assets/logo.png`, a PNG rendered from the original
+`assets/logo.svg`; `assets/favicon.png` and `assets/apple-touch-icon.png` are
+the emblem for the browser tab and phone home screen. To replace the logo,
+upload a new `assets/logo.png` with the same name.
+
+After any change, GitHub Pages can take a few minutes to publish, and
+browsers may keep the previous files for up to 10 minutes. The asset links in
+`index.html` end in `?v=…`; raise that number when you change a file so
+browsers fetch the new copy.
 
 ## Update the questions
 
@@ -106,8 +112,8 @@ to participants), and the questions answered wrongly. Filter or pivot on the dep
 |---|---|
 | `index.html`, `assets/style.css`, `assets/app.js` | The website |
 | `assets/questions.js` | Questions generated from the spreadsheet (do not edit by hand) |
-| `assets/logo.svg`, `assets/favicon.svg` | Ministry logo and tab icon |
-| `config.js` | Logo path, questions per level, departments, title, intro text and optional results URL |
+| `assets/logo.png` (from `assets/logo.svg`), `assets/favicon.png`, `assets/apple-touch-icon.png` | Ministry logo and icons |
+| `config.js` | Questions per level, departments, title, intro text and optional results URL |
 | `data/questions.xlsx` | The question bank (source of truth) |
 | `scripts/build_questions.py` | Spreadsheet → `assets/questions.js` converter |
 | `.github/workflows/update-questions.yml` | Re-runs the converter when the spreadsheet changes |
