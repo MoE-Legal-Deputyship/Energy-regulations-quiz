@@ -6,14 +6,15 @@
     {
       title: "استبيان قياس فهم أنظمة قطاع الطاقة",
       intro: "",
-      questionsPerLevel: { 1: 10, 2: 9, 3: 6 },
+      questionsPerLevel: null,
       departments: [],
       shuffleOptions: true,
       results: { supabaseUrl: "", supabaseKey: "" },
     },
     window.QUIZ_CONFIG || {}
   );
-  const STORAGE_KEY = "energy-regulations-quiz:v2";
+  // v3: the 25-question bank (October 2026); progress saved against older banks is ignored.
+  const STORAGE_KEY = "energy-regulations-quiz:v3";
   // Where finished results are stored (a Supabase "results" table); empty = not collected.
   const RESULTS = CFG.results || {};
   const RESULTS_URL = RESULTS.supabaseUrl && RESULTS.supabaseKey
@@ -40,10 +41,13 @@
   const LEVEL_IDS = Object.keys(DATA.levels).map(Number);
   const allQuestions = DATA.systems.flatMap((s) => s.questions);
 
-  // How many questions each level contributes to one attempt (capped by what the bank holds).
+  // How many questions each level contributes to one attempt: all of them unless
+  // questionsPerLevel asks for fewer (capped by what the bank holds).
   const levelQuota = new Map(LEVEL_IDS.map((l) => {
-    const wanted = Math.max(0, Math.floor(Number((CFG.questionsPerLevel || {})[l]) || 0));
-    return [l, Math.min(wanted, allQuestions.filter((q) => q.level === l).length)];
+    const available = allQuestions.filter((q) => q.level === l).length;
+    if (!CFG.questionsPerLevel) return [l, available];
+    const wanted = Math.max(0, Math.floor(Number(CFG.questionsPerLevel[l]) || 0));
+    return [l, Math.min(wanted, available)];
   }));
   const quizLength = [...levelQuota.values()].reduce((a, b) => a + b, 0);
 
@@ -115,9 +119,9 @@
   let reviewFilter = "all";
 
   // ---------- question draw ----------
-  // Each attempt takes levelQuota questions per level, spread as evenly as possible
-  // across the regulations, preferring the questions this browser has shown the
-  // fewest times — so a second attempt gets different questions until the bank runs out.
+  // Each attempt takes levelQuota questions per level (every question by default), spread
+  // as evenly as possible across the regulations and preferring the questions this browser
+  // has shown the fewest times, then shuffles them within each level.
   function drawQuestions() {
     const shown = readJSON(SHOWN_KEY, {});
     const times = (q) => shown[q.id] || 0;
@@ -419,7 +423,9 @@
       by_level: summary(groupScores(rows, (r) => r.q.level, LEVEL_IDS), (l) => DATA.levels[l]),
       by_system: summary(groupScores(rows, (r) => r.s.id, DATA.systems.map((s) => s.id)),
         (id) => DATA.systems.find((s) => s.id === id).short),
-      wrong: rows.filter((r) => !r.ok).map((r) => r.s.short + " - سؤال " + r.q.n).join(" | "),
+      // Question numbers (column م in data/questions.xlsx), in bank order.
+      wrong: rows.filter((r) => !r.ok).map((r) => r.q.n)
+        .sort((a, b) => Number(a) - Number(b) || String(a).localeCompare(String(b))).join("، "),
       answers: rows.map((r) => ({ id: r.q.id, chosen: r.a == null ? "" : r.q.options[r.a], correct: r.ok })),
     };
     fetch(RESULTS_URL, {

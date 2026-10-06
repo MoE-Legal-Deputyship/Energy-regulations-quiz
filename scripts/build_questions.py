@@ -6,14 +6,17 @@ Usage:
 
 Defaults: data/questions.xlsx -> assets/questions.js
 
-Every sheet whose header row starts with "م" is treated as one regulation.
-Expected columns (in order):
-    م | النظام | المستوى | نمط السؤال | نص السؤال | الخيارات | الإجابة الصحيحة |
-    السند النظامي ذو الارتباط | شرح مبسط | ملاحظات للمراجعة
+Any sheet with a header row naming these columns is read (column order and
+extra columns do not matter; sheets without them, such as instructions, are
+skipped):
+
+    required: نص السؤال | الخيارات | الإجابة الصحيحة | المستوى
+    optional: م | النظام | نمط السؤال | السند النظامي ذو الارتباط | شرح مبسط
 
 Options are written one per line inside the "الخيارات" cell, and the
-"الإجابة الصحيحة" cell must match one of them exactly. The review-notes
-column is internal and is never published.
+"الإجابة الصحيحة" cell must match one of them exactly. Questions are grouped
+by the "النظام" column (or by sheet when it is absent). Columns not listed
+above, such as "محور القياس" or review notes, are never published.
 """
 
 import json
@@ -42,12 +45,29 @@ TYPES = [
     ("mcq", "اختيار من متعدد", ("اختيار",)),
 ]
 
+# Field -> accepted header names (compared after collapsing spaces).
+COLUMNS = {
+    "n": ("م",),
+    "system": ("النظام",),
+    "level": ("المستوى",),
+    "type": ("نمط السؤال",),
+    "text": ("نص السؤال",),
+    "options": ("الخيارات",),
+    "answer": ("الإجابة الصحيحة",),
+    "reference": ("السند النظامي ذو الارتباط", "السند النظامي"),
+    "explanation": ("شرح مبسط", "الشرح"),
+}
+REQUIRED = ("text", "options", "answer", "level")
+
 
 def clean(value):
     if value is None:
         return ""
+    if isinstance(value, float) and value.is_integer():
+        value = int(value)
     text = str(value).replace("\r\n", "\n").replace("\r", "\n")
-    return re.sub(r"[ \t ]+", " ", text).strip()
+    lines = [re.sub(r"[ \t ]+", " ", line).strip() for line in text.split("\n")]
+    return "\n".join(lines).strip()
 
 
 def match(value, table, what, where):
@@ -57,39 +77,71 @@ def match(value, table, what, where):
     raise ValueError(f"{where}: unknown {what} '{value}'")
 
 
-def system_name(raw, fallback):
+def system_name(raw):
     # "1- نظام الكهرباء" -> "نظام الكهرباء"
-    name = re.sub(r"^\s*\d+\s*[-–.)]\s*", "", raw or "").strip()
-    return name or fallback
+    return re.sub(r"^\s*\d+\s*[-–.)]\s*", "", raw or "").strip()
+
+
+def short_name(name):
+    # "نظام الكهرباء" -> "الكهرباء" (used in the results sheet)
+    return re.sub(r"^نظام\s+", "", name).strip() or name
+
+
+def find_header(rows):
+    """Return (row index, {field: column index}) for the first header row, or (None, None)."""
+    for i, row in enumerate(rows[:10]):
+        names = [re.sub(r"\s+", " ", clean(v)) for v in row]
+        cols = {}
+        for field, accepted in COLUMNS.items():
+            for c, name in enumerate(names):
+                if name in accepted:
+                    cols[field] = c
+                    break
+        if all(f in cols for f in REQUIRED):
+            return i, cols
+    return None, None
 
 
 def build(src):
     wb = openpyxl.load_workbook(src, data_only=True)
-    systems, errors = [], []
+    systems = {}  # name -> list of questions, in order of first appearance
+    errors, seen = [], set()
 
     for ws in wb.worksheets:
         rows = list(ws.iter_rows(values_only=True))
-        if not rows or clean(rows[0][0]) != "م":
+        header, cols = find_header(rows)
+        if header is None:
             continue  # instructions sheet or anything else without the header
 
-        questions, raw_system = [], ""
-        for row_no, row in enumerate(rows[1:], start=2):
-            cells = [clean(v) for v in (list(row) + [None] * 10)[:10]]
-            num, sys_raw, level, qtype, text, options, answer, ref, expl, _notes = cells
+        for row_no, row in enumerate(rows[header + 1:], start=header + 2):
+            def get(field):
+                c = cols.get(field)
+                return clean(row[c]) if c is not None and c < len(row) else ""
+
+            text = get("text")
             if not text:
                 continue
             where = f"[{ws.title}] row {row_no}"
-            raw_system = raw_system or sys_raw
+            num = get("n") or str(row_no)
+            if num in seen:
+                errors.append(f"{where}: question number '{num}' is used twice")
+                continue
+            seen.add(num)
+
+            opts = [o.strip() for o in get("options").split("\n") if o.strip()]
             try:
-                level_key = match(level, LEVELS, "level", where)
-                type_key = match(qtype, TYPES, "question type", where)
+                level = match(get("level"), LEVELS, "level", where)
+                if get("type"):
+                    qtype = match(get("type"), TYPES, "question type", where)
+                else:
+                    qtype = "tf" if sorted(opts) == sorted(["صح", "خطأ"]) else "mcq"
             except ValueError as exc:
                 errors.append(str(exc))
                 continue
 
-            opts = [o.strip() for o in options.split("\n") if o.strip()]
-            if type_key == "tf" and not opts:
+            if qtype == "tf" and not opts:
                 opts = ["صح", "خطأ"]
+            answer = get("answer")
             if len(opts) < 2:
                 errors.append(f"{where}: needs at least two options")
                 continue
@@ -97,34 +149,31 @@ def build(src):
                 errors.append(f"{where}: correct answer '{answer}' is not one of the options")
                 continue
 
-            questions.append({
-                "id": f"{len(systems) + 1}-{num or row_no}",
+            name = system_name(get("system")) or ws.title.strip()
+            systems.setdefault(name, []).append({
+                "id": num,
                 "n": num,
-                "level": level_key,
-                "type": type_key,
+                "level": level,
+                "type": qtype,
                 "text": text,
                 "options": opts,
                 "answer": opts.index(answer),
-                "reference": ref,
-                "explanation": expl,
-            })
-
-        if questions:
-            systems.append({
-                "id": len(systems) + 1,
-                "name": system_name(raw_system, ws.title),
-                "short": ws.title.strip(),
-                "questions": questions,
+                "reference": get("reference"),
+                "explanation": get("explanation"),
             })
 
     if errors:
         raise SystemExit("Spreadsheet problems:\n  " + "\n  ".join(errors))
     if not systems:
-        raise SystemExit("No question sheets found (header row must start with 'م').")
+        raise SystemExit("No questions found: a sheet needs a header row with "
+                         "'نص السؤال', 'الخيارات', 'الإجابة الصحيحة' and 'المستوى'.")
 
     return {
         "levels": {str(k): label for k, label, _ in LEVELS},
-        "systems": systems,
+        "systems": [
+            {"id": i, "name": name, "short": short_name(name), "questions": questions}
+            for i, (name, questions) in enumerate(systems.items(), start=1)
+        ],
     }
 
 

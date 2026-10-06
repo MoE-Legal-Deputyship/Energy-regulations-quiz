@@ -1,58 +1,44 @@
 # استبيان قياس فهم أنظمة قطاع الطاقة
 
-An Arabic, mobile-friendly quiz website built from the question bank in
-[`data/questions.xlsx`](data/questions.xlsx): 103 questions across 6
-regulations and 3 levels.
+An Arabic, mobile-friendly survey website built from the question bank in
+[`data/questions.xlsx`](data/questions.xlsx): 25 questions across 6
+regulations and 3 levels. Live at **https://energysurvey.moe**.
 
-Participants pick their department, answer 25 questions one at a time, and,
-once they finish, see their score (overall and per regulation) with each
-question's correct answer, its legal reference (السند النظامي) and
-the simple explanation (شرح مبسط). The review-notes column
-(ملاحظات للمراجعة) is internal and is never shown on the site.
+Participants pick their department, answer all 25 questions one at a time,
+and, once they finish, see their score (overall and per regulation) with each
+question's correct answer, its legal reference (السند النظامي) and the simple
+explanation (شرح مبسط).
 
-## How the 25 questions are chosen
+## How questions are shown
 
-Every attempt draws a fresh set from the bank:
+| Level | Questions |
+|---|---|
+| الأول (تأسيسي) | 4 |
+| المتوسط | 10 |
+| المتقدم | 11 |
 
-| Level | Questions per attempt | In the bank |
-|---|---|---|
-| الأول (تأسيسي) | 10 | 26 |
-| المتوسط | 9 | 39 |
-| المتقدم | 6 | 38 |
+- Every attempt asks all the questions in the bank, from foundational to
+  advanced. The order within each level and the order of the options are
+  shuffled on every attempt, so a retry looks different but has the same
+  questions.
+- Levels and the "محور القياس" column are used internally only and are never
+  shown to participants.
+- To ask a random subset of a larger bank instead, set `questionsPerLevel`
+  in `config.js` (see Settings).
 
-- Each level's share is spread across the six regulations, so every
-  attempt covers all of them (4–5 questions each).
-- Questions run from foundational to advanced; their order within a level
-  and the order of the options are shuffled. Levels are used only for the
-  draw and are never shown to participants.
-- The browser remembers which questions it has already shown and prefers
-  ones it has not, so a second attempt on the same device gets a completely
-  new set. From the third attempt some foundational questions come back,
-  since the bank has only 26 of them.
+## Hosting
 
-It is a static site (plain HTML, CSS and JavaScript), so it can be hosted
-for free on GitHub Pages at a link like
-`https://abdulmohsenfa.github.io/Energy-regulations-quiz/`.
+A static site (plain HTML, CSS and JavaScript) on GitHub Pages, from the
+repository `MoE-Legal-Deputyship/Energy-regulations-quiz`:
 
-## Publish the website (one time)
-
-1. On GitHub, open the repository's **Settings → Pages**.
-2. Under **Build and deployment**, set **Source** to **Deploy from a branch**.
-3. Pick the branch that holds these files (for example `main`) and the
-   **/ (root)** folder, then click **Save**.
-4. After a minute or two the page shows the live link:
-   **https://abdulmohsenfa.github.io/Energy-regulations-quiz/**
-
-Share that link with participants. To use your own domain instead
-(for example `quiz.example.com`), enter it under **Custom domain** on the
-same page and follow GitHub's DNS instructions.
-
-## Logo
-
-The header shows `assets/logo.png`, a PNG rendered from the original
-`assets/logo.svg`; `assets/favicon.png` and `assets/apple-touch-icon.png` are
-the emblem for the browser tab and phone home screen. To replace the logo,
-upload a new `assets/logo.png` with the same name.
+- **Settings → Pages**: *Deploy from a branch*, the
+  `claude/questionnaire-website-js03uz` branch, **/ (root)** folder.
+- **Custom domain** `energysurvey.moe` (registered at Porkbun) with
+  **Enforce HTTPS**. Porkbun DNS has four `A` records for the bare domain
+  (`185.199.108.153`, `185.199.109.153`, `185.199.110.153`,
+  `185.199.111.153`) and a `CNAME` for `www` →
+  `moe-legal-deputyship.github.io`. GitHub keeps the domain in the `CNAME`
+  file; do not delete it.
 
 After any change, GitHub Pages can take a few minutes to publish, and
 browsers may keep the previous files for up to 10 minutes. The asset links in
@@ -61,23 +47,47 @@ browsers fetch the new copy.
 
 ## Update the questions
 
-Keep the same sheet layout (one sheet per regulation, same column order), then:
+`data/questions.xlsx` has one sheet, **بنك الأسئلة**, with these columns
+(order does not matter; the converter finds them by name):
 
-- **On GitHub:** upload the new file as `data/questions.xlsx`
+| Column | Rules |
+|---|---|
+| م | Unique number; also used in the results sheet to list wrong answers |
+| النظام | Regulation the question belongs to |
+| المستوى | الأول (تأسيسي)، المتوسط or المتقدم |
+| محور القياس | Internal; not published |
+| نص السؤال | The question |
+| الخيارات | One option per line in the same cell; write صح and خطأ for a true/false question |
+| الإجابة الصحيحة | Must match one of the options exactly |
+| السند النظامي ذو الارتباط | Shown after the participant finishes |
+| شرح مبسط | Shown after the participant finishes |
+
+The second sheet, **طريقة التعبئة**, repeats these rules in Arabic. Then:
+
+- **On GitHub:** upload the file as `data/questions.xlsx`
   (*Add file → Upload files*, same name). The *Update questions* workflow
   regenerates `assets/questions.js` and the site updates by itself.
 - **Locally:** `pip install openpyxl && python3 scripts/build_questions.py`,
   then commit both files.
 
-The converter stops with a clear message if a correct answer does not match
-one of its options exactly, or if a level or question type is not recognised.
+The converter stops with a clear message naming the row if a correct answer
+does not match one of its options exactly, a level is not recognised, or a
+question number is used twice.
+
+## Logo
+
+The header shows `assets/logo.png`, a PNG rendered from the original
+`assets/logo.svg`; `assets/favicon.png` and `assets/apple-touch-icon.png` are
+the emblem for the browser tab and phone home screen. To replace the logo,
+upload a new `assets/logo.png` with the same name.
 
 ## Settings
 
 Edit [`config.js`](config.js) to change:
 
-- `questionsPerLevel`: how many questions each level contributes (the total is
-  the quiz length);
+- `questionsPerLevel`: `null` asks every question; a count per level (for
+  example `{ 1: 10, 2: 9, 3: 6 }`) asks a random subset, spread across the
+  regulations and preferring questions the browser has not shown before;
 - `departments`: the list participants must choose from;
 - the title and introduction text, or whether multiple-choice options are
   shuffled (true/false questions always keep their order).
@@ -87,7 +97,8 @@ Edit [`config.js`](config.js) to change:
 Each finished survey is saved as one row in a Supabase database table
 (`results`): date, department, name (optional), score, percentage, time
 taken, score per level and per regulation (levels appear only here, not to
-participants), the questions answered wrongly, and every answer.
+participants), the numbers (م) of the questions answered wrongly, and every
+answer.
 
 - **See or download them:** sign in at supabase.com → your project →
   **Table Editor → results**. Use **Export → CSV** and open the file in Excel;
@@ -104,9 +115,9 @@ participants), the questions answered wrongly, and every answer.
 
 ## Good to know
 
-- Because the site is static, the answers are inside the page's files. That
-  suits a learning or self-assessment survey; it is not meant to be a
-  secure, proctored exam.
+- Because the site is static, the answers are inside the page's files and
+  this repository is public. That suits a learning or self-assessment survey;
+  it is not meant to be a secure, proctored exam.
 - To preview locally, open `index.html` in a browser, or run
   `python3 -m http.server` and visit http://localhost:8000.
 
@@ -122,3 +133,4 @@ participants), the questions answered wrongly, and every answer.
 | `scripts/build_questions.py` | Spreadsheet → `assets/questions.js` converter |
 | `.github/workflows/update-questions.yml` | Re-runs the converter when the spreadsheet changes |
 | `tools/supabase-setup.sql` | Creates the results table in Supabase |
+| `CNAME` | Custom domain for GitHub Pages (managed by GitHub) |

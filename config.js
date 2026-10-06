@@ -2,12 +2,14 @@
 window.QUIZ_CONFIG = {
   title: "استبيان قياس فهم أنظمة قطاع الطاقة",
   intro:
-    "يهدف هذا الاستبيان إلى قياس فهم أنظمة قطاع الطاقة. تُختار الأسئلة عشوائياً في كل محاولة، " +
+    "يهدف هذا الاستبيان إلى قياس فهم أنظمة قطاع الطاقة. " +
     "وبعد الإنهاء تظهر نتيجتك مع الإجابة الصحيحة لكل سؤال وسندها النظامي وشرح مبسط لها.",
 
-  // Questions drawn from each level in one attempt (1 = الأول (تأسيسي), 2 = المتوسط, 3 = المتقدم).
-  // 10 + 9 + 6 = 25 questions. Levels are used for the draw only and are not shown to participants.
-  questionsPerLevel: { 1: 10, 2: 9, 3: 6 },
+  // null = every question in data/questions.xlsx is asked, foundational to advanced, in a new
+  // order with shuffled options on each attempt. To ask a random subset of a larger bank
+  // instead, give a count per level (1 = الأول (تأسيسي), 2 = المتوسط, 3 = المتقدم), for
+  // example { 1: 10, 2: 9, 3: 6 }. Levels are never shown to participants.
+  questionsPerLevel: null,
 
   // Participants must pick one of these before starting.
   departments: [
