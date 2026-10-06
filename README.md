@@ -14,15 +14,14 @@ explanation (شرح مبسط).
 | Level | Questions |
 |---|---|
 | الأول (تأسيسي) | 4 |
-| المتوسط | 10 |
-| المتقدم | 11 |
+| المتوسط | 9 |
+| المتقدم | 12 |
 
 - Every attempt asks all the questions in the bank, from foundational to
   advanced. The order within each level and the order of the options are
   shuffled on every attempt, so a retry looks different but has the same
   questions.
-- Levels and the "محور القياس" column are used internally only and are never
-  shown to participants.
+- Levels are used internally only and are never shown to participants.
 - To ask a random subset of a larger bank instead, set `questionsPerLevel`
   in `config.js` (see Settings).
 
@@ -55,12 +54,14 @@ browsers fetch the new copy.
 | م | Unique number; also used in the results sheet to list wrong answers |
 | النظام | Regulation the question belongs to |
 | المستوى | الأول (تأسيسي)، المتوسط or المتقدم |
-| محور القياس | Internal; not published |
-| نص السؤال | The question |
-| الخيارات | One option per line in the same cell; write صح and خطأ for a true/false question |
+| السؤال | The question (a column named نص السؤال also works) |
+| الخيارات | Options separated by ؛ (or one per line in the same cell); write صح ؛ خطأ for a true/false question |
 | الإجابة الصحيحة | Must match one of the options exactly |
-| السند النظامي ذو الارتباط | Shown after the participant finishes |
+| السند النظامي | Shown after the participant finishes |
 | شرح مبسط | Shown after the participant finishes |
+
+Any other column (for example محور القياس or review notes) is ignored and
+never published.
 
 The second sheet, **طريقة التعبئة**, repeats these rules in Arabic. Then:
 

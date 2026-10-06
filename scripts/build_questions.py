@@ -10,11 +10,11 @@ Any sheet with a header row naming these columns is read (column order and
 extra columns do not matter; sheets without them, such as instructions, are
 skipped):
 
-    required: نص السؤال | الخيارات | الإجابة الصحيحة | المستوى
-    optional: م | النظام | نمط السؤال | السند النظامي ذو الارتباط | شرح مبسط
+    required: السؤال (or نص السؤال) | الخيارات | الإجابة الصحيحة | المستوى
+    optional: م | النظام | نمط السؤال | السند النظامي (ذو الارتباط) | شرح مبسط
 
-Options are written one per line inside the "الخيارات" cell, and the
-"الإجابة الصحيحة" cell must match one of them exactly. Questions are grouped
+Options go in the "الخيارات" cell, separated by "؛" or written one per line,
+and the "الإجابة الصحيحة" cell must match one of them exactly. Questions are grouped
 by the "النظام" column (or by sheet when it is absent). Columns not listed
 above, such as "محور القياس" or review notes, are never published.
 """
@@ -51,7 +51,7 @@ COLUMNS = {
     "system": ("النظام",),
     "level": ("المستوى",),
     "type": ("نمط السؤال",),
-    "text": ("نص السؤال",),
+    "text": ("نص السؤال", "السؤال"),
     "options": ("الخيارات",),
     "answer": ("الإجابة الصحيحة",),
     "reference": ("السند النظامي ذو الارتباط", "السند النظامي"),
@@ -128,7 +128,7 @@ def build(src):
                 continue
             seen.add(num)
 
-            opts = [o.strip() for o in get("options").split("\n") if o.strip()]
+            opts = [o.strip() for o in re.split(r"[\n؛]", get("options")) if o.strip()]
             try:
                 level = match(get("level"), LEVELS, "level", where)
                 if get("type"):

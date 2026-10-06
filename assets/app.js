@@ -13,8 +13,9 @@
     },
     window.QUIZ_CONFIG || {}
   );
-  // v3: the 25-question bank (October 2026); progress saved against older banks is ignored.
-  const STORAGE_KEY = "energy-regulations-quiz:v3";
+  // Bump when question numbers change meaning, so progress saved against an older bank
+  // is ignored (v4: questions 20, 22–24 replaced, October 2026).
+  const STORAGE_KEY = "energy-regulations-quiz:v4";
   // Where finished results are stored (a Supabase "results" table); empty = not collected.
   const RESULTS = CFG.results || {};
   const RESULTS_URL = RESULTS.supabaseUrl && RESULTS.supabaseKey
