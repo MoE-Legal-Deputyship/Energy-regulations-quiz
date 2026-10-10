@@ -323,8 +323,15 @@
     return pct >= ADVICE.strong ? "strong" : pct >= ADVICE.review ? "review" : "training";
   }
 
-  // Rates each regulation and, for the weak ones, lists the legal references of the missed
-  // questions, each linking to that question's explanation further down the page.
+  // Knowledge types (column نوع المعرفة) in bank order, with the participant's score in each.
+  function skillScores(rows) {
+    const names = [...new Set(allQuestions.map((q) => q.skill).filter(Boolean))];
+    return groupScores(rows, (r) => r.q.skill, names);
+  }
+
+  // Development plan: first the knowledge types the participant is weak in, each with study
+  // advice and the legal references of the missed questions (linking to their explanations),
+  // then a short line per regulation that needs training or review.
   function renderAdvice(rows, bySystem, pct) {
     if (!ADVICE) return "";
     const LABEL = { training: "أولوية تدريبية", review: "مراجعة ذاتية" };
@@ -332,36 +339,47 @@
     const nameOf = (id) => DATA.systems.find((s) => s.id === id).name;
     const overall = (ADVICE.overall || []).find((o) => pct >= o.min);
 
-    const focus = (systemId) => {
+    const gaps = skillScores(rows).filter((g) => g.pct < ADVICE.strong).sort((a, b) => a.pct - b.pct);
+    const skillItems = gaps.map((g) => {
+      const missed = rows.filter((r) => r.q.skill === g.k && !r.ok);
+      const laws = [...new Set(missed.map((r) => r.s.name))];
       const seen = new Set();
-      return rows.filter((r) => r.s.id === systemId && !r.ok && r.q.reference).filter((r) => {
-        if (seen.has(r.q.reference)) return false;
-        seen.add(r.q.reference);
+      const refs = missed.filter((r) => {
+        const key = r.s.id + "|" + r.q.reference;
+        if (!r.q.reference || seen.has(key)) return false;
+        seen.add(key);
         return true;
-      }).map((r) => `<li><a href="#review-${r.i + 1}" data-goto>${esc(r.q.reference)}</a></li>`).join("");
-    };
-
-    const weak = bySystem.filter((g) => bandOf(g.pct) !== "strong").sort((a, b) => a.pct - b.pct);
-    const strengths = bySystem.filter((g) => bandOf(g.pct) === "strong").map((g) => esc(nameOf(g.k)));
-    const items = weak.map((g) => {
-      const band = bandOf(g.pct);
-      const refs = focus(g.k);
+      }).map((r) => `<li><a href="#review-${r.i + 1}" data-goto>${esc(r.q.reference)}</a> <span class="muted">— ${esc(r.s.name)}</span></li>`).join("");
+      const tip = (ADVICE.skills || {})[g.k];
       return `
-        <div class="advice-item ${band}">
+        <div class="advice-item ${g.pct < ADVICE.review ? "training" : "review"}">
           <div class="advice-head">
-            <h3>${esc(nameOf(g.k))}</h3>
-            <span class="badge">${LABEL[band]} · ${g.ok} من ${g.total}</span>
+            <h3>${esc(g.k)}</h3>
+            <span class="badge">أخطأت في ${g.total - g.ok} من ${g.total}</span>
           </div>
-          <p>${fill(band === "training" ? ADVICE.training : ADVICE.selfReview, nameOf(g.k))}</p>
-          ${refs ? `<ul>${refs}</ul>` : ""}
+          ${tip ? `<p>${esc(tip)}</p>` : ""}
+          <p class="muted small">ظهر ذلك في: ${laws.map(esc).join("، ")}</p>
+          ${refs ? `<p class="small">راجع:</p><ul>${refs}</ul>` : ""}
         </div>`;
     }).join("");
+
+    const weakLaws = bySystem.filter((g) => bandOf(g.pct) !== "strong").sort((a, b) => a.pct - b.pct);
+    const lawRows = weakLaws.map((g) => {
+      const band = bandOf(g.pct);
+      return `
+        <div class="law-row ${band}">
+          <span>${fill(band === "training" ? ADVICE.training : ADVICE.selfReview, nameOf(g.k))}</span>
+          <span class="badge">${LABEL[band]} · ${g.ok} من ${g.total}</span>
+        </div>`;
+    }).join("");
+    const strengths = bySystem.filter((g) => bandOf(g.pct) === "strong").map((g) => esc(nameOf(g.k)));
 
     return `
       <section class="card advice">
         <h2>توصيات للتطوير</h2>
         ${overall ? `<p class="advice-overall">${esc(overall.text)}</p>` : ""}
-        ${items}
+        ${skillItems ? `<h3 class="advice-sub">ما الذي تحتاج إلى تطويره</h3>${skillItems}` : ""}
+        ${lawRows ? `<h3 class="advice-sub">حسب النظام</h3>${lawRows}` : ""}
         ${strengths.length ? `<p class="advice-strengths"><b>نقاط القوة:</b> ${strengths.join("، ")}</p>` : ""}
       </section>`;
   }
@@ -474,19 +492,27 @@
       by_level: summary(groupScores(rows, (r) => r.q.level, LEVEL_IDS), (l) => DATA.levels[l]),
       by_system: summary(groupScores(rows, (r) => r.s.id, DATA.systems.map((s) => s.id)),
         (id) => DATA.systems.find((s) => s.id === id).short),
+      by_skill: summary(skillScores(rows), (k) => k),
       // Question numbers (column م in data/questions.xlsx), in bank order.
       wrong: rows.filter((r) => !r.ok).map((r) => r.q.n)
         .sort((a, b) => Number(a) - Number(b) || String(a).localeCompare(String(b))).join("، "),
       answers: rows.map((r) => ({ id: r.q.id, chosen: r.a == null ? "" : r.q.options[r.a], correct: r.ok })),
     };
-    fetch(RESULTS_URL, {
+    const send = (body) => fetch(RESULTS_URL, {
       method: "POST",
       headers: {
         apikey: RESULTS.supabaseKey,
         "Content-Type": "application/json",
         Prefer: "return=minimal",
       },
-      body: JSON.stringify(row),
+      body: JSON.stringify(body),
+    });
+    // A results table created before the by_skill column existed rejects the row (400);
+    // send it again without that column so collection keeps working.
+    send(row).then((res) => {
+      if (res.status !== 400) return res;
+      const { by_skill, ...rest } = row;
+      return send(rest);
     }).then((res) => {
       if (!res.ok) return; // retried next time the results are shown
       state.submitted = true;

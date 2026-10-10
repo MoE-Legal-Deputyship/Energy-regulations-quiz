@@ -184,6 +184,15 @@ legend { padding: 0; margin-bottom: 12px; font-weight: 700; font-size: 1.1rem; }
 .advice-item.review .badge { color: var(--warn); }
 .advice-item ul { margin: 6px 0 0; padding-inline-start: 20px; }
 .advice-item a { color: var(--primary); }
+.advice-sub { font-size: 1rem; margin: 18px 0 8px; }
+.advice-item p + p { margin-top: 4px; }
+.small { font-size: .88rem; }
+.law-row {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+  gap: 2px 12px; padding: 8px 0; border-bottom: 1px solid var(--border);
+}
+.law-row.training .badge { color: var(--wrong); }
+.law-row.review .badge { color: var(--warn); }
 .advice-strengths { margin-top: 14px; }
 .advice-strengths b { color: var(--correct); }
 .review-item { scroll-margin-top: 12px; }

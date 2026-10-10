@@ -54,6 +54,7 @@ browsers fetch the new copy.
 | م | Unique number; also used in the results sheet to list wrong answers |
 | النظام | Regulation the question belongs to |
 | المستوى | الأول (تأسيسي)، المتوسط or المتقدم |
+| نوع المعرفة | Knowledge type; drives the development advice |
 | السؤال | The question (a column named نص السؤال also works) |
 | الخيارات | Options separated by ؛ (or one per line in the same cell); write صح ؛ خطأ for a true/false question |
 | الإجابة الصحيحة | Must match one of the options exactly |
@@ -100,32 +101,37 @@ Under the score, each participant gets a short development plan:
 
 - **An overall line** chosen by total score (85% and above, 60% and above,
   below 60%).
-- **Each regulation rated** by the participant's share of correct answers in
-  it:
+- **What to develop, by knowledge type.** Each question is tagged in the
+  spreadsheet column **نوع المعرفة**:
 
-  | Score in the regulation | Shown as | Advice |
-  |---|---|---|
-  | below 50% | أولوية تدريبية | Join a training programme in that regulation |
-  | 50% to below 75% | مراجعة ذاتية | Review it on their own |
-  | 75% and above | نقاط القوة | Listed as a strength |
+  | Knowledge type | Questions |
+  |---|---|
+  | الاختصاص | 1, 6, 14 |
+  | المدد والإجراءات | 3, 5, 8, 16 |
+  | الحدود والعقوبات | 4, 7, 9, 17, 21 |
+  | المفاهيم والتعريفات | 2, 10, 11, 12, 20 |
+  | نطاق الأنظمة والعلاقة بينها | 15, 18, 19, 24, 25 |
+  | القيود والاستثناءات | 13, 22, 23 |
 
-- **What to study:** for each regulation that needs work, the legal
-  references (السند النظامي) of the questions they missed, each linking to
-  that question's explanation further down the page.
+  Every type scored below 75% is shown with its study advice, the regulations
+  where the mistakes happened, and the legal references of the missed
+  questions, each linking to that question's explanation. Because a type
+  spans several regulations, it gives a more reliable and more specific
+  signal than a single regulation's 4–5 questions.
+- **By regulation:** below 50% recommends a training programme in it, 50% to
+  below 75% recommends self-review, 75% and above lists it as a strength.
 
-With 4–5 questions per regulation this is a direction, not a diagnosis: one
-answer moves a regulation by 20–25 points. The thresholds and all wording are
-in the `advice` block of `config.js` ({النظام} stands for the regulation's
-name); delete the block to hide the advice. Per-regulation scores are also in
-the `by_system` column of the results table, so training needs can be
-compared by department.
+The thresholds and all wording, including the advice for each knowledge type,
+are in the `advice` block of `config.js` ({النظام} stands for the regulation's
+name); delete the block to hide the advice. A new knowledge type added in the
+spreadsheet needs an entry under `advice.skills` to get advice text.
 
 ## Collected results
 
 Each finished survey is saved as one row in a Supabase database table
 (`results`): date, department, name (optional), score, percentage, time
-taken, score per level and per regulation (levels appear only here, not to
-participants), the numbers (م) of the questions answered wrongly, and every
+taken, score per level, per regulation and per knowledge type (`by_skill`;
+levels appear only here, not to participants), the numbers (م) of the questions answered wrongly, and every
 answer.
 
 - **See or download them:** sign in at supabase.com → your project →

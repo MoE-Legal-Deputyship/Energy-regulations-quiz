@@ -24,10 +24,12 @@ window.QUIZ_CONFIG = {
     "إدارة الدعم والمساندة",
   ],
 
-  // Development advice shown under the score. Each regulation is rated by the participant's
-  // share of correct answers in it: below `review` % → training is recommended; from `review`
-  // up to below `strong` % → self-review; `strong` % or more → listed as a strength. For the
-  // regulations that need work, the legal references of the missed questions are listed.
+  // Development advice shown under the score, in two parts:
+  // 1. By knowledge type (column نوع المعرفة in the spreadsheet): every type the participant
+  //    scored below `strong` % in is shown with its study advice from `skills` and the legal
+  //    references of the missed questions. A type missing from `skills` gets no advice text.
+  // 2. By regulation: below `review` % → `training`; from `review` to below `strong` % →
+  //    `selfReview`; `strong` % or more → listed as a strength.
   // {النظام} is replaced by the regulation's name. Delete this block to hide the advice.
   advice: {
     strong: 75,
@@ -37,8 +39,22 @@ window.QUIZ_CONFIG = {
       { min: 60, text: "أداء جيد ولديك أساس يُبنى عليه، والتركيز على المجالات المبيّنة أدناه سيرفع مستواك." },
       { min: 0, text: "أداء يحتاج إلى تطوير، ونوصي بخطة تطوير تبدأ بالمجالات المبيّنة أدناه." },
     ],
-    training: "نوصي بالالتحاق ببرنامج تدريبي في {النظام}، مع التركيز على:",
-    selfReview: "نوصي بمراجعة {النظام}، ولا سيما:",
+    skills: {
+      "الاختصاص":
+        "يظهر خلط في تحديد الجهة المختصة. ارسم خريطة «من يختص بماذا» بين الوزارة والهيئة واللجان في كل نظام، وقارن بين مواد الاختصاص المتقابلة، وانتبه إلى ما نقلته التعديلات من جهة إلى أخرى.",
+      "المدد والإجراءات":
+        "يظهر خلط في المدد والإجراءات. اجمع في جدول واحد المدد النظامية وأثر انقضائها (هل يُعد السكوت إذناً أم رفضاً)، وترتيب الإجراءات وجهة التظلم من كل قرار.",
+      "الحدود والعقوبات":
+        "يظهر خلط في الأرقام والأسقف. قارن في جدول واحد بين النسب وأسقف الغرامات والعقوبات في الأنظمة المختلفة، وميّز بين الإجراء العاجل والعقوبة.",
+      "المفاهيم والتعريفات":
+        "يظهر خلط في المصطلحات. ابدأ بمادة التعريفات (المادة الأولى) في كل نظام، وركّز على المصطلحات المتقاربة وما يترتب على كل تعريف من أثر.",
+      "نطاق الأنظمة والعلاقة بينها":
+        "يظهر خلط في تحديد النظام الحاكم. ارسم سلسلة القيمة من المنبع إلى المصب وحدد النظام الذي يحكم كل مرحلة، وموقع اتفاقية الامتياز من هذه الأنظمة.",
+      "القيود والاستثناءات":
+        "يظهر خلط بين الأصل والاستثناء. عند قراءة كل حكم حدد القاعدة أولاً ثم الاستثناء وشروطه ونطاقه، فأغلب هذه الأسئلة تختبر حدود الاستثناء.",
+    },
+    training: "نوصي بالالتحاق ببرنامج تدريبي في {النظام}.",
+    selfReview: "نوصي بمراجعة {النظام}.",
   },
 
   // Shuffle the options of multiple-choice questions for every participant.

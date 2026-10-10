@@ -11,7 +11,7 @@ extra columns do not matter; sheets without them, such as instructions, are
 skipped):
 
     required: السؤال (or نص السؤال) | الخيارات | الإجابة الصحيحة | المستوى
-    optional: م | النظام | نمط السؤال | السند النظامي (ذو الارتباط) | شرح مبسط
+    optional: م | النظام | نمط السؤال | نوع المعرفة | السند النظامي (ذو الارتباط) | شرح مبسط
 
 Options go in the "الخيارات" cell, separated by "؛" or written one per line,
 and the "الإجابة الصحيحة" cell must match one of them exactly. Questions are grouped
@@ -51,6 +51,7 @@ COLUMNS = {
     "system": ("النظام",),
     "level": ("المستوى",),
     "type": ("نمط السؤال",),
+    "skill": ("نوع المعرفة",),
     "text": ("نص السؤال", "السؤال"),
     "options": ("الخيارات",),
     "answer": ("الإجابة الصحيحة",),
@@ -150,7 +151,7 @@ def build(src):
                 continue
 
             name = system_name(get("system")) or ws.title.strip()
-            systems.setdefault(name, []).append({
+            question = {
                 "id": num,
                 "n": num,
                 "level": level,
@@ -160,7 +161,10 @@ def build(src):
                 "answer": opts.index(answer),
                 "reference": get("reference"),
                 "explanation": get("explanation"),
-            })
+            }
+            if get("skill"):
+                question["skill"] = get("skill")  # drives the development advice
+            systems.setdefault(name, []).append(question)
 
     if errors:
         raise SystemExit("Spreadsheet problems:\n  " + "\n  ".join(errors))
