@@ -12,6 +12,7 @@
   --correct-tint: #ebf6f0;
   --wrong: #b3261e;
   --wrong-tint: #fcefee;
+  --warn: #9a6200;
   --radius: 6px;
   color-scheme: light;
 }
@@ -161,6 +162,31 @@ legend { padding: 0; margin-bottom: 12px; font-weight: 700; font-size: 1.1rem; }
 .table th, .table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: start; }
 .table th { background: var(--surface-2); font-weight: 700; color: var(--muted); }
 .table .num { text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.table .band-training { color: var(--wrong); font-weight: 700; }
+.table .band-review { color: var(--warn); font-weight: 700; }
+.table .band-strong { color: var(--correct); font-weight: 700; }
+
+/* Development advice */
+.advice h2 { margin-bottom: 6px; }
+.advice-overall { margin-bottom: 14px; }
+.advice-item {
+  border: 1px solid var(--border); border-inline-start: 4px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px;
+}
+.advice-item + .advice-item { margin-top: 10px; }
+.advice-item.training { border-inline-start-color: var(--wrong); }
+.advice-item.review { border-inline-start-color: var(--warn); }
+.advice-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; margin-bottom: 4px; }
+.advice-head h3 { font-size: 1rem; }
+.badge { font-size: .82rem; font-weight: 700; white-space: nowrap; }
+.advice-item.training .badge { color: var(--wrong); }
+.advice-item.review .badge { color: var(--warn); }
+.advice-item ul { margin: 6px 0 0; padding-inline-start: 20px; }
+.advice-item a { color: var(--primary); }
+.advice-strengths { margin-top: 14px; }
+.advice-strengths b { color: var(--correct); }
+.review-item { scroll-margin-top: 12px; }
 
 .filters { display: flex; flex-wrap: wrap; gap: 0; margin-bottom: 14px; }
 .filter {

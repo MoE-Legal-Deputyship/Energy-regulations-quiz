@@ -22,6 +22,8 @@
     ? String(RESULTS.supabaseUrl).trim().replace(/\/+$/, "").replace(/\/rest\/v1$/, "") + "/rest/v1/results"
     : "";
   const SHOWN_KEY = "energy-regulations-quiz:shown";
+  // Development advice under the score (thresholds and wording in config.js); null = none.
+  const ADVICE = CFG.advice || null;
   const app = document.getElementById("app");
 
   const TYPE_HINT = {
@@ -317,6 +319,53 @@
     }).filter((g) => g.total);
   }
 
+  function bandOf(pct) {
+    return pct >= ADVICE.strong ? "strong" : pct >= ADVICE.review ? "review" : "training";
+  }
+
+  // Rates each regulation and, for the weak ones, lists the legal references of the missed
+  // questions, each linking to that question's explanation further down the page.
+  function renderAdvice(rows, bySystem, pct) {
+    if (!ADVICE) return "";
+    const LABEL = { training: "أولوية تدريبية", review: "مراجعة ذاتية" };
+    const fill = (text, name) => esc(text || "").split("{النظام}").join("<b>" + esc(name) + "</b>");
+    const nameOf = (id) => DATA.systems.find((s) => s.id === id).name;
+    const overall = (ADVICE.overall || []).find((o) => pct >= o.min);
+
+    const focus = (systemId) => {
+      const seen = new Set();
+      return rows.filter((r) => r.s.id === systemId && !r.ok && r.q.reference).filter((r) => {
+        if (seen.has(r.q.reference)) return false;
+        seen.add(r.q.reference);
+        return true;
+      }).map((r) => `<li><a href="#review-${r.i + 1}" data-goto>${esc(r.q.reference)}</a></li>`).join("");
+    };
+
+    const weak = bySystem.filter((g) => bandOf(g.pct) !== "strong").sort((a, b) => a.pct - b.pct);
+    const strengths = bySystem.filter((g) => bandOf(g.pct) === "strong").map((g) => esc(nameOf(g.k)));
+    const items = weak.map((g) => {
+      const band = bandOf(g.pct);
+      const refs = focus(g.k);
+      return `
+        <div class="advice-item ${band}">
+          <div class="advice-head">
+            <h3>${esc(nameOf(g.k))}</h3>
+            <span class="badge">${LABEL[band]} · ${g.ok} من ${g.total}</span>
+          </div>
+          <p>${fill(band === "training" ? ADVICE.training : ADVICE.selfReview, nameOf(g.k))}</p>
+          ${refs ? `<ul>${refs}</ul>` : ""}
+        </div>`;
+    }).join("");
+
+    return `
+      <section class="card advice">
+        <h2>توصيات للتطوير</h2>
+        ${overall ? `<p class="advice-overall">${esc(overall.text)}</p>` : ""}
+        ${items}
+        ${strengths.length ? `<p class="advice-strengths"><b>نقاط القوة:</b> ${strengths.join("، ")}</p>` : ""}
+      </section>`;
+  }
+
   function renderResults() {
     const rows = resultRows();
     const total = rows.length;
@@ -329,7 +378,7 @@
       <tr>
         <td>${esc(DATA.systems.find((s) => s.id === g.k).name)}</td>
         <td class="num">${g.ok} من ${g.total}</td>
-        <td class="num">${g.pct}%</td>
+        <td class="num${ADVICE ? " band-" + bandOf(g.pct) : ""}">${g.pct}%</td>
       </tr>`).join("");
 
     const review = rows.map((r) => {
@@ -349,7 +398,7 @@
           </li>`;
       }).join("");
       return `
-        <article class="card review-item ${r.ok ? "is-correct" : "is-wrong"}" data-ok="${r.ok ? 1 : 0}">
+        <article class="card review-item ${r.ok ? "is-correct" : "is-wrong"}" id="review-${r.i + 1}" data-ok="${r.ok ? 1 : 0}">
           <div class="ri-head">
             <span>السؤال ${r.i + 1} <span class="muted">— ${esc(r.s.name)}</span></span>
             <span class="status">${r.ok ? "صحيحة" : r.a == null ? "لم تتم الإجابة" : "خاطئة"}</span>
@@ -380,6 +429,7 @@
           <button type="button" class="btn btn-secondary" data-act="print">طباعة</button>
         </div>
       </section>
+      ${renderAdvice(rows, bySystem, pct)}
       <section class="section">
         <h2>مراجعة الإجابات</h2>
         <div class="filters" role="group" aria-label="تصفية الأسئلة">
@@ -464,6 +514,12 @@
     const filter = e.target.closest("[data-filter]");
     if (filter) {
       reviewFilter = filter.dataset.filter;
+      return applyFilter();
+    }
+
+    // An advice link jumps to a question's explanation; make sure it is not filtered out.
+    if (e.target.closest("[data-goto]")) {
+      reviewFilter = "all";
       return applyFilter();
     }
 

@@ -90,8 +90,35 @@ Edit [`config.js`](config.js) to change:
   example `{ 1: 10, 2: 9, 3: 6 }`) asks a random subset, spread across the
   regulations and preferring questions the browser has not shown before;
 - `departments`: the list participants must choose from;
+- `advice`: the development advice shown with the results (see below);
 - the title and introduction text, or whether multiple-choice options are
   shuffled (true/false questions always keep their order).
+
+## Development advice (توصيات للتطوير)
+
+Under the score, each participant gets a short development plan:
+
+- **An overall line** chosen by total score (85% and above, 60% and above,
+  below 60%).
+- **Each regulation rated** by the participant's share of correct answers in
+  it:
+
+  | Score in the regulation | Shown as | Advice |
+  |---|---|---|
+  | below 50% | أولوية تدريبية | Join a training programme in that regulation |
+  | 50% to below 75% | مراجعة ذاتية | Review it on their own |
+  | 75% and above | نقاط القوة | Listed as a strength |
+
+- **What to study:** for each regulation that needs work, the legal
+  references (السند النظامي) of the questions they missed, each linking to
+  that question's explanation further down the page.
+
+With 4–5 questions per regulation this is a direction, not a diagnosis: one
+answer moves a regulation by 20–25 points. The thresholds and all wording are
+in the `advice` block of `config.js` ({النظام} stands for the regulation's
+name); delete the block to hide the advice. Per-regulation scores are also in
+the `by_system` column of the results table, so training needs can be
+compared by department.
 
 ## Collected results
 

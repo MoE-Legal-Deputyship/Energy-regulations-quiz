@@ -24,6 +24,23 @@ window.QUIZ_CONFIG = {
     "إدارة الدعم والمساندة",
   ],
 
+  // Development advice shown under the score. Each regulation is rated by the participant's
+  // share of correct answers in it: below `review` % → training is recommended; from `review`
+  // up to below `strong` % → self-review; `strong` % or more → listed as a strength. For the
+  // regulations that need work, the legal references of the missed questions are listed.
+  // {النظام} is replaced by the regulation's name. Delete this block to hide the advice.
+  advice: {
+    strong: 75,
+    review: 50,
+    overall: [ // the first line whose `min` (total %) the participant reaches is shown
+      { min: 85, text: "أداء متمكن، ففهمك لأنظمة قطاع الطاقة متين. حافظ عليه بمتابعة ما يطرأ عليها من تعديلات." },
+      { min: 60, text: "أداء جيد ولديك أساس يُبنى عليه، والتركيز على المجالات المبيّنة أدناه سيرفع مستواك." },
+      { min: 0, text: "أداء يحتاج إلى تطوير، ونوصي بخطة تطوير تبدأ بالمجالات المبيّنة أدناه." },
+    ],
+    training: "نوصي بالالتحاق ببرنامج تدريبي في {النظام}، مع التركيز على:",
+    selfReview: "نوصي بمراجعة {النظام}، ولا سيما:",
+  },
+
   // Shuffle the options of multiple-choice questions for every participant.
   shuffleOptions: true,
 
